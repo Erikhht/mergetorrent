@@ -66,6 +66,7 @@
     <Import Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Bencode.vb" />
     <Compile Include="MainForm.vb">
       <SubType>Form</SubType>
     </Compile>
