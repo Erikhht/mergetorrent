@@ -166,7 +166,7 @@ Partial Class MainForm
         'CompleteTarget
         '
         Me.CompleteTarget.AutoSize = True
-        Me.CompleteTarget.Location = New System.Drawing.Point(633, 111)
+        Me.CompleteTarget.Location = New System.Drawing.Point(633, 105)
         Me.CompleteTarget.Name = "CompleteTarget"
         Me.CompleteTarget.Size = New System.Drawing.Size(33, 13)
         Me.CompleteTarget.TabIndex = 18
@@ -176,7 +176,7 @@ Partial Class MainForm
         'Merge
         '
         Me.Merge.Enabled = False
-        Me.Merge.Location = New System.Drawing.Point(540, 108)
+        Me.Merge.Location = New System.Drawing.Point(540, 101)
         Me.Merge.Name = "Merge"
         Me.Merge.Size = New System.Drawing.Size(68, 20)
         Me.Merge.TabIndex = 14
@@ -186,7 +186,7 @@ Partial Class MainForm
         'FindTarget
         '
         Me.FindTarget.Enabled = False
-        Me.FindTarget.Location = New System.Drawing.Point(466, 108)
+        Me.FindTarget.Location = New System.Drawing.Point(466, 101)
         Me.FindTarget.Name = "FindTarget"
         Me.FindTarget.Size = New System.Drawing.Size(68, 20)
         Me.FindTarget.TabIndex = 17
@@ -196,7 +196,7 @@ Partial Class MainForm
         'FileTarget
         '
         Me.FileTarget.Enabled = False
-        Me.FileTarget.Location = New System.Drawing.Point(96, 108)
+        Me.FileTarget.Location = New System.Drawing.Point(96, 101)
         Me.FileTarget.Name = "FileTarget"
         Me.FileTarget.Size = New System.Drawing.Size(364, 20)
         Me.FileTarget.TabIndex = 15
@@ -205,7 +205,7 @@ Partial Class MainForm
         '
         Me.lblTarget.AutoSize = True
         Me.lblTarget.Enabled = False
-        Me.lblTarget.Location = New System.Drawing.Point(12, 112)
+        Me.lblTarget.Location = New System.Drawing.Point(15, 104)
         Me.lblTarget.Name = "lblTarget"
         Me.lblTarget.Size = New System.Drawing.Size(75, 13)
         Me.lblTarget.TabIndex = 16
@@ -215,7 +215,7 @@ Partial Class MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(703, 328)
+        Me.ClientSize = New System.Drawing.Size(685, 133)
         Me.Controls.Add(Me.CompleteTarget)
         Me.Controls.Add(Me.FindTarget)
         Me.Controls.Add(Me.lblTarget)
