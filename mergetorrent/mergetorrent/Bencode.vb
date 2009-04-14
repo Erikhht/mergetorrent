@@ -1,9 +1,11 @@
 ﻿Public Class Bencode
     'This class provides functions to encode and decode bencoded text
 
-    Shared ParseError As Exception
+    Class ParseErrorException
+        Inherits Exception
+    End Class
 
-    Shared Function Decode(ByVal inStream As System.IO.Stream) As Object
+    Public Shared Function Decode(ByVal inStream As System.IO.Stream) As Object
         'Returns one of the encoded types: byte string, integer, list or dictionary.
         'return nothing if the input is empty
         'throws exceptions on errors in the input
@@ -23,7 +25,7 @@
         Try
             NextChar = Chr(br.PeekChar)
         Catch ex As Exception
-            Throw ParseError
+            Throw New ParseErrorException
         End Try
 
         Select Case NextChar
@@ -37,16 +39,16 @@
         If Char.IsDigit(NextChar) Then
             Return DecodeByteString(br)
         End If
-        Throw ParseError
+        Throw New ParseErrorException
     End Function
 
-    Private Shared Function DecodeDictionary(ByVal br As System.IO.BinaryReader) As Dictionary(Of Byte(), Object)
+    Private Shared Function DecodeDictionary(ByVal br As System.IO.BinaryReader) As Dictionary(Of String, Object)
         If Chr(br.ReadByte) <> "d" Then
-            Throw ParseError
+            Throw New ParseErrorException
         End If
-        Dim ret As New Dictionary(Of Byte(), Object)
+        Dim ret As New Dictionary(Of String, Object)
         Do While Chr(br.PeekChar) <> "e"
-            ret.Add(DecodeByteString(br), DecodeElement(br))
+            ret.Add(System.Text.Encoding.ASCII.GetString(DecodeByteString(br)), DecodeElement(br))
         Loop
         br.ReadByte() 'throw away the e
         Return ret
@@ -54,7 +56,7 @@
 
     Private Shared Function DecodeList(ByVal br As System.IO.BinaryReader) As List(Of Object)
         If Chr(br.ReadByte) <> "l" Then
-            Throw ParseError
+            Throw New ParseErrorException
         End If
         Dim ret As New List(Of Object)
         Do While Chr(br.PeekChar) <> "e"
@@ -66,7 +68,7 @@
 
     Private Shared Function DecodeInteger(ByVal br As System.IO.BinaryReader) As Int64
         If Chr(br.ReadByte) <> "i" Then
-            Throw ParseError
+            Throw New ParseErrorException
         End If
         Dim ret As Int64
         Dim negative As Boolean = False
@@ -90,7 +92,7 @@
                 Return ret
                 Exit Do
             Else
-                Throw ParseError
+                Throw New ParseErrorException
             End If
         Loop
     End Function
@@ -107,7 +109,7 @@
                     len *= 10
                     len += Int64.Parse(nextchar)
                 Case Else
-                    Throw ParseError
+                    Throw New ParseErrorException
             End Select
         Loop
         ' : already consumed, now read in the bytes
