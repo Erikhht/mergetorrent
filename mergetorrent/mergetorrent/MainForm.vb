@@ -105,7 +105,7 @@
                 in_stream(best_stream).Read(buffer, 0, read_len)
                 hash_result = CheckHash.Hash(buffer, read_len)
                 Dim j As Integer = 0
-                Do While i < 20 AndAlso pieces(pieces_position + i) = hash_result(i)
+                Do While j < 20 AndAlso pieces(pieces_position + j) = hash_result(j)
                     j += 1
                 Loop
                 If j = 20 Then
@@ -126,7 +126,10 @@
                 Else
                     'piece not found in either source
                     best_stream = 1 - best_stream 'back to our original best
-                    out_stream.Position += read_len 'nothing to copy, too bad
+                    'both in_streams already advanced
+                    If out_stream_id = -1 Then 'out_stream has not been advanced
+                        out_stream.Position += read_len 'nothing to copy, too bad
+                    End If
                 End If
             End If
             pieces_position += 20
@@ -140,16 +143,10 @@
         Loop
         CompleteTarget.Text = (CDbl(complete_pieces) / CDbl(pieces.Length)).ToString("P02")
         Merge.Text = (CDbl(pieces_position) / CDbl(pieces.Length)).ToString("P02")
-        in_stream(0).Flush()
         in_stream(0).Close()
-        in_stream(0).Dispose()
-        in_stream(1).Flush()
         in_stream(1).Close()
-        in_stream(1).Dispose()
         If out_stream_id = -1 Then
-            out_stream.Flush()
             out_stream.Close()
-            out_stream.Dispose()
         End If
         Merge.Enabled = True
         Merge.Text = "Merge"
@@ -214,9 +211,7 @@
         Loop
         completion.Text = (CDbl(complete_pieces) / CDbl(pieces.Length)).ToString("P02")
         btn.Text = (CDbl(pieces_position) / CDbl(pieces.Length)).ToString("P02")
-        in_stream.Flush()
         in_stream.Close()
-        in_stream.Dispose()
         btn.Enabled = True
         btn.Text = "Check"
     End Sub
@@ -252,6 +247,7 @@
         If multifile Then
             Dim fbd As New FolderBrowserDialog
 
+            fbd.ShowNewFolderButton = False
             If fbd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
                 FileA.Text = fbd.SelectedPath
             End If
@@ -273,6 +269,7 @@
         If multifile Then
             Dim fbd As New FolderBrowserDialog
 
+            fbd.ShowNewFolderButton = False
             If fbd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
                 FileB.Text = fbd.SelectedPath
             End If

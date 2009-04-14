@@ -56,9 +56,7 @@
         End Get
         Set(ByVal value As Long)
             If current_stream IsNot Nothing Then
-                current_stream.Flush()
                 current_stream.Close()
-                current_stream.Dispose()
                 current_stream = Nothing
             End If
 
@@ -67,7 +65,7 @@
             Do
                 value -= DirectCast(files(current_file)("length"), Long)
                 current_file += 1
-            Loop While (value >= 0)
+            Loop While (value >= 0) AndAlso current_file < files.Count
             current_file -= 1 'now the current_file is the fie that needs to be opened for this position
             current_filepos = DirectCast(files(current_file)("length"), Long) + value 'calculate it now because we already know
         End Set
@@ -77,9 +75,7 @@
         Dim buffer_used As Integer = 0
 
         If current_stream IsNot Nothing AndAlso current_stream.CanRead = False Then
-            current_stream.Flush()
             current_stream.Close()
-            current_stream.Dispose()
             current_stream = Nothing
         End If
 
@@ -89,26 +85,28 @@
                 For Each dir() As Byte In DirectCast(files(current_file)("path"), List(Of Object))
                     filename = My.Computer.FileSystem.CombinePath(filename, System.Text.Encoding.UTF8.GetString(dir))
                 Next
-                current_stream = System.IO.File.OpenRead(filename)
+                If Not My.Computer.FileSystem.GetFileInfo(filename).Exists Then
+                    current_stream = System.IO.Stream.Null 'the empty stream?
+                Else
+                    current_stream = System.IO.File.OpenRead(filename)
+                End If
                 current_stream.Position = current_filepos
             End If
 
             Dim read_len As Integer
 
             read_len = count - buffer_used 'ideally, we want to fill the buffer
-            If read_len > current_stream.Length - current_stream.Position Then
+            If read_len > DirectCast(files(current_file)("length"), Long) - current_filepos Then
                 'the current file is too small to fill the buffer as needed
-                read_len = CInt(current_stream.Length - current_stream.Position)
+                read_len = CInt(DirectCast(files(current_file)("length"), Long) - current_filepos)
             End If
             current_stream.Read(buffer, offset + buffer_used, read_len) 'read in as much as possible from this file
             buffer_used += read_len
             current_filepos += read_len
             current_pos += read_len
-            If current_stream.Position = current_stream.Length Then
+            If current_filepos = DirectCast(files(current_file)("length"), Long) Then
                 'we are at the end and done with this stream
-                current_stream.Flush()
                 current_stream.Close()
-                current_stream.Dispose()
                 current_stream = Nothing
                 current_file += 1
                 current_filepos = 0
@@ -128,9 +126,7 @@
         Dim buffer_used As Integer = 0
 
         If current_stream IsNot Nothing AndAlso current_stream.CanWrite = False Then
-            current_stream.Flush()
             current_stream.Close()
-            current_stream.Dispose()
             current_stream = Nothing
         End If
 
@@ -140,7 +136,13 @@
                 For Each Dir() As Byte In DirectCast(files(current_file)("path"), List(Of Object))
                     filename = My.Computer.FileSystem.CombinePath(filename, System.Text.Encoding.UTF8.GetString(Dir))
                 Next
+                If Not My.Computer.FileSystem.GetFileInfo(filename).Directory.Exists Then
+                    My.Computer.FileSystem.CreateDirectory(My.Computer.FileSystem.GetFileInfo(filename).DirectoryName)
+                End If
                 current_stream = System.IO.File.Open(filename, IO.FileMode.OpenOrCreate, IO.FileAccess.Write)
+                If current_stream.Length <> DirectCast(files(current_file)("length"), Long) Then
+                    current_stream.SetLength(DirectCast(files(current_file)("length"), Long))
+                End If
                 current_stream.Position = current_filepos
             End If
 
@@ -157,7 +159,6 @@
             current_pos += write_len
             If current_stream.Position = DirectCast(files(current_file)("length"), Long) Then
                 'we are at the end and done with this stream
-                current_stream.Flush()
                 current_stream.Close()
                 current_stream = Nothing
                 current_file += 1
