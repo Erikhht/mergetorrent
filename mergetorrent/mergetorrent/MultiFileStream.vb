@@ -1,8 +1,8 @@
 ﻿Public Class MultiFileStream
     Inherits System.IO.Stream
 
-    Dim root As String
-    Dim files As List(Of Dictionary(Of String, Object))
+    Protected root As String
+    Protected files As List(Of Dictionary(Of String, Object))
     Dim current_file As Integer
     Dim current_stream As System.IO.Stream
     Dim current_pos As Long
@@ -71,6 +71,18 @@
         End Set
     End Property
 
+    Protected Overridable Function GetStream(ByVal current_file As Integer) As System.IO.Stream
+        Dim filename As String = root
+        For Each Dir() As Byte In DirectCast(files(current_file)("path"), List(Of Object))
+            filename = My.Computer.FileSystem.CombinePath(filename, System.Text.Encoding.UTF8.GetString(Dir))
+        Next
+        If Not My.Computer.FileSystem.GetFileInfo(filename).Exists Then
+            GetStream = System.IO.Stream.Null 'the empty stream?
+        Else
+            GetStream = System.IO.File.OpenRead(filename)
+        End If
+    End Function
+
     Public Overrides Function Read(ByVal buffer() As Byte, ByVal offset As Integer, ByVal count As Integer) As Integer
         Dim buffer_used As Integer = 0
 
@@ -81,15 +93,7 @@
 
         Do While buffer_used < count
             If current_stream Is Nothing Then
-                Dim filename As String = root
-                For Each dir() As Byte In DirectCast(files(current_file)("path"), List(Of Object))
-                    filename = My.Computer.FileSystem.CombinePath(filename, System.Text.Encoding.UTF8.GetString(dir))
-                Next
-                If Not My.Computer.FileSystem.GetFileInfo(filename).Exists Then
-                    current_stream = System.IO.Stream.Null 'the empty stream?
-                Else
-                    current_stream = System.IO.File.OpenRead(filename)
-                End If
+                current_stream = GetStream(current_file)
                 current_stream.Position = current_filepos
             End If
 

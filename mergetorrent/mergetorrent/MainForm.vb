@@ -17,20 +17,20 @@
                 new_files.Add(d)
             Next
             If FileA.Text = FileTarget.Text Then
-                in_stream(0) = New MultiFileStream(FileA.Text, new_files)
-                in_stream(1) = New MultiFileStream(FileB.Text, new_files)
+                in_stream(0) = New MultiFileWithBackupStream(FileA.Text, new_files, FileB.Text)
+                in_stream(1) = New MultiFileWithBackupStream(FileB.Text, new_files, FileA.Text)
                 out_stream = in_stream(0)
                 best_stream = 0
                 out_stream_id = 0
             ElseIf FileB.Text = FileTarget.Text Then
-                in_stream(0) = New MultiFileStream(FileA.Text, new_files)
-                in_stream(1) = New MultiFileStream(FileB.Text, new_files)
+                in_stream(0) = New MultiFileWithBackupStream(FileA.Text, new_files, FileB.Text)
+                in_stream(1) = New MultiFileWithBackupStream(FileB.Text, new_files, FileA.Text)
                 out_stream = in_stream(1)
                 out_stream_id = 1
                 best_stream = 1
             Else
-                in_stream(0) = New MultiFileStream(FileA.Text, new_files)
-                in_stream(1) = New MultiFileStream(FileB.Text, new_files)
+                in_stream(0) = New MultiFileWithBackupStream(FileA.Text, new_files, FileB.Text)
+                in_stream(1) = New MultiFileWithBackupStream(FileB.Text, new_files, FileA.Text)
                 out_stream = New MultiFileStream(FileTarget.Text, new_files)
                 out_stream_id = -1
             End If
@@ -327,11 +327,13 @@
                 multifile = True
                 lblA.Text = "Source Dir"
                 lblB.Text = "Source Dir"
+                lblTarget.Text = "Target Dir"
             Else
                 'this is single-file
                 multifile = False
                 lblA.Text = "Source File"
                 lblB.Text = "Source File"
+                lblTarget.Text = "Target File"
             End If
             lblA.Enabled = True
             lblB.Enabled = True
@@ -342,15 +344,20 @@
         Else
             lblA.Enabled = False
             lblB.Enabled = False
+            lblTarget.Enabled = False
             FileA.Enabled = False
             FileB.Enabled = False
+            FileTarget.Enabled = False
             FindA.Enabled = False
             FindB.Enabled = False
+            FindTarget.Enabled = False
             CheckA.Enabled = False
             CheckB.Enabled = False
+            Merge.Enabled = False
         End If
         FileA.Text = ""
         FileB.Text = ""
+        FileTarget.Text = ""
     End Sub
 
     Private Sub FileA_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles FileA.TextChanged
