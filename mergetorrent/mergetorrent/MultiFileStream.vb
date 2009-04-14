@@ -11,7 +11,6 @@
     Public Sub New(ByVal root As String, ByVal files As List(Of Dictionary(Of String, Object)))
         MyBase.New()
         Me.root = root
-        If Me.root.Last = "\" Then Me.root = root.Substring(0, root.Length - 1)
         Me.files = files
 
         current_file = 0
@@ -46,7 +45,7 @@
         Get
             Length = 0
             For Each file As Dictionary(Of String, Object) In files
-                Length += file("length")
+                Length += DirectCast(file("length"), Long)
             Next
         End Get
     End Property
@@ -56,19 +55,21 @@
             Return current_pos
         End Get
         Set(ByVal value As Long)
-            current_stream.Flush()
-            current_stream.Close()
-            current_stream.Dispose()
-            current_stream = Nothing
+            If current_stream IsNot Nothing Then
+                current_stream.Flush()
+                current_stream.Close()
+                current_stream.Dispose()
+                current_stream = Nothing
+            End If
 
             current_pos = value
             current_file = 0
             Do
-                value -= files(current_file)("length")
+                value -= DirectCast(files(current_file)("length"), Long)
                 current_file += 1
             Loop While (value >= 0)
             current_file -= 1 'now the current_file is the fie that needs to be opened for this position
-            current_filepos = files(current_file)("length") + value 'calculate it now because we already know
+            current_filepos = DirectCast(files(current_file)("length"), Long) + value 'calculate it now because we already know
         End Set
     End Property
 
@@ -84,9 +85,9 @@
 
         Do While buffer_used < count
             If current_stream Is Nothing Then
-                Dim filename = root
-                For Each dir() As Byte In files(current_file)("path")
-                    filename += "\" + System.Text.Encoding.UTF8.GetString(dir)
+                Dim filename As String = root
+                For Each dir() As Byte In DirectCast(files(current_file)("path"), List(Of Object))
+                    filename = My.Computer.FileSystem.CombinePath(filename, System.Text.Encoding.UTF8.GetString(dir))
                 Next
                 current_stream = System.IO.File.OpenRead(filename)
                 current_stream.Position = current_filepos
@@ -97,7 +98,7 @@
             read_len = count - buffer_used 'ideally, we want to fill the buffer
             If read_len > current_stream.Length - current_stream.Position Then
                 'the current file is too small to fill the buffer as needed
-                read_len = current_stream.Length - current_stream.Position
+                read_len = CInt(current_stream.Length - current_stream.Position)
             End If
             current_stream.Read(buffer, offset + buffer_used, read_len) 'read in as much as possible from this file
             buffer_used += read_len
@@ -135,22 +136,26 @@
 
         Do While buffer_used < count
             If current_stream Is Nothing Then
-                current_stream = System.IO.File.Open(root + files(current_file)("path"), IO.FileMode.OpenOrCreate, IO.FileAccess.Write)
+                Dim filename As String = root
+                For Each Dir() As Byte In DirectCast(files(current_file)("path"), List(Of Object))
+                    filename = My.Computer.FileSystem.CombinePath(filename, System.Text.Encoding.UTF8.GetString(Dir))
+                Next
+                current_stream = System.IO.File.Open(filename, IO.FileMode.OpenOrCreate, IO.FileAccess.Write)
                 current_stream.Position = current_filepos
             End If
 
             Dim write_len As Integer
 
             write_len = count - buffer_used 'ideally, we want to use all the buffer
-            If write_len > files(current_file)("length") - current_stream.Position Then
+            If write_len > DirectCast(files(current_file)("length"), Long) - current_stream.Position Then
                 'the current file is too small to empty the buffer as needed
-                write_len = files(current_file)("length") - current_stream.Position
+                write_len = CInt(DirectCast(files(current_file)("length"), Long) - current_stream.Position)
             End If
             current_stream.Write(buffer, offset + buffer_used, write_len) 'write out as much as possible to this file
             buffer_used += write_len
             current_filepos += write_len
             current_pos += write_len
-            If current_stream.Position = files(current_file)("length") Then
+            If current_stream.Position = DirectCast(files(current_file)("length"), Long) Then
                 'we are at the end and done with this stream
                 current_stream.Flush()
                 current_stream.Close()

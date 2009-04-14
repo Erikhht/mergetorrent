@@ -35,12 +35,17 @@ Partial Class MainForm
         Me.lblB = New System.Windows.Forms.Label
         Me.FileB = New System.Windows.Forms.TextBox
         Me.CheckB = New System.Windows.Forms.Button
+        Me.CompleteTarget = New System.Windows.Forms.Label
+        Me.Merge = New System.Windows.Forms.Button
+        Me.FindTarget = New System.Windows.Forms.Button
+        Me.FileTarget = New System.Windows.Forms.TextBox
+        Me.lblTarget = New System.Windows.Forms.Label
         Me.SuspendLayout()
         '
         'CheckA
         '
         Me.CheckA.Enabled = False
-        Me.CheckA.Location = New System.Drawing.Point(540, 31)
+        Me.CheckA.Location = New System.Drawing.Point(540, 32)
         Me.CheckA.Name = "CheckA"
         Me.CheckA.Size = New System.Drawing.Size(68, 20)
         Me.CheckA.TabIndex = 0
@@ -151,18 +156,71 @@ Partial Class MainForm
         'CheckB
         '
         Me.CheckB.Enabled = False
-        Me.CheckB.Location = New System.Drawing.Point(540, 57)
+        Me.CheckB.Location = New System.Drawing.Point(540, 58)
         Me.CheckB.Name = "CheckB"
         Me.CheckB.Size = New System.Drawing.Size(68, 20)
         Me.CheckB.TabIndex = 9
         Me.CheckB.Text = "Check"
         Me.CheckB.UseVisualStyleBackColor = True
         '
+        'CompleteTarget
+        '
+        Me.CompleteTarget.AutoSize = True
+        Me.CompleteTarget.Location = New System.Drawing.Point(633, 111)
+        Me.CompleteTarget.Name = "CompleteTarget"
+        Me.CompleteTarget.Size = New System.Drawing.Size(33, 13)
+        Me.CompleteTarget.TabIndex = 18
+        Me.CompleteTarget.Text = "100%"
+        Me.CompleteTarget.Visible = False
+        '
+        'Merge
+        '
+        Me.Merge.Enabled = False
+        Me.Merge.Location = New System.Drawing.Point(540, 108)
+        Me.Merge.Name = "Merge"
+        Me.Merge.Size = New System.Drawing.Size(68, 20)
+        Me.Merge.TabIndex = 14
+        Me.Merge.Text = "Merge"
+        Me.Merge.UseVisualStyleBackColor = True
+        '
+        'FindTarget
+        '
+        Me.FindTarget.Enabled = False
+        Me.FindTarget.Location = New System.Drawing.Point(466, 108)
+        Me.FindTarget.Name = "FindTarget"
+        Me.FindTarget.Size = New System.Drawing.Size(68, 20)
+        Me.FindTarget.TabIndex = 17
+        Me.FindTarget.Text = "Browse..."
+        Me.FindTarget.UseVisualStyleBackColor = True
+        '
+        'FileTarget
+        '
+        Me.FileTarget.Enabled = False
+        Me.FileTarget.Location = New System.Drawing.Point(96, 108)
+        Me.FileTarget.Name = "FileTarget"
+        Me.FileTarget.Size = New System.Drawing.Size(364, 20)
+        Me.FileTarget.TabIndex = 15
+        '
+        'lblTarget
+        '
+        Me.lblTarget.AutoSize = True
+        Me.lblTarget.Enabled = False
+        Me.lblTarget.Location = New System.Drawing.Point(12, 112)
+        Me.lblTarget.Name = "lblTarget"
+        Me.lblTarget.Size = New System.Drawing.Size(75, 13)
+        Me.lblTarget.TabIndex = 16
+        Me.lblTarget.Text = "Target File/Dir"
+        '
         'MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(703, 328)
+        Me.Controls.Add(Me.CompleteTarget)
+        Me.Controls.Add(Me.FindTarget)
+        Me.Controls.Add(Me.lblTarget)
+        Me.Controls.Add(Me.FileTarget)
+        Me.Controls.Add(Me.Merge)
         Me.Controls.Add(Me.CompleteB)
         Me.Controls.Add(Me.FindB)
         Me.Controls.Add(Me.lblB)
@@ -195,5 +253,10 @@ Partial Class MainForm
     Friend WithEvents lblB As System.Windows.Forms.Label
     Friend WithEvents FileB As System.Windows.Forms.TextBox
     Friend WithEvents CheckB As System.Windows.Forms.Button
+    Friend WithEvents CompleteTarget As System.Windows.Forms.Label
+    Friend WithEvents Merge As System.Windows.Forms.Button
+    Friend WithEvents FindTarget As System.Windows.Forms.Button
+    Friend WithEvents FileTarget As System.Windows.Forms.TextBox
+    Friend WithEvents lblTarget As System.Windows.Forms.Label
 
 End Class

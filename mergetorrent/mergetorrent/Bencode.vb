@@ -29,11 +29,11 @@
         End Try
 
         Select Case NextChar
-            Case "d"
+            Case "d"c
                 Return DecodeDictionary(br)
-            Case "l"
+            Case "l"c
                 Return DecodeList(br)
-            Case "i"
+            Case "i"c
                 Return DecodeInteger(br)
         End Select
         If Char.IsDigit(NextChar) Then
@@ -42,7 +42,7 @@
         Throw New ParseErrorException
     End Function
 
-    Private Shared Function DecodeDictionary(ByVal br As System.IO.BinaryReader) As Dictionary(Of String, Object)
+    Public Shared Function DecodeDictionary(ByVal br As System.IO.BinaryReader) As Dictionary(Of String, Object)
         If Chr(br.ReadByte) <> "d" Then
             Throw New ParseErrorException
         End If
@@ -73,10 +73,10 @@
         Dim ret As Int64
         Dim negative As Boolean = False
         Select Case Chr(br.PeekChar)
-            Case "e"
+            Case "e"c
                 br.ReadByte() 'throw away the e
                 Return 0
-            Case "-"
+            Case "-"c
                 br.ReadByte() 'throw away the -
                 negative = True
         End Select
@@ -99,15 +99,15 @@
 
     Private Shared Function DecodeByteString(ByVal br As System.IO.BinaryReader) As Byte()
         Dim nextchar As Char
-        Dim len As Int64 = 0
+        Dim len As Integer = 0
         Do
             nextchar = Chr(br.ReadByte)
             Select Case nextchar
-                Case ":"
+                Case ":"c
                     Exit Do
-                Case "0" To "9"
+                Case "0"c To "9"c
                     len *= 10
-                    len += Int64.Parse(nextchar)
+                    len += Integer.Parse(nextchar)
                 Case Else
                     Throw New ParseErrorException
             End Select
