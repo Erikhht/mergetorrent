@@ -234,8 +234,8 @@
         ofd.DefaultExt = ".torrent"
         ofd.DereferenceLinks = True
         ofd.Filter = "Torrents (*.torrent)|*.torrent|All files (*.*)|*.*"
-        If System.IO.Directory.Exists(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\uTorrent") Then
-            ofd.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "\uTorrent"
+        If System.IO.Directory.Exists(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")) Then
+            ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
         End If
         ofd.Multiselect = False
         If ofd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
@@ -248,6 +248,22 @@
             Dim fbd As New FolderBrowserDialog
 
             fbd.ShowNewFolderButton = False
+            If My.Computer.FileSystem.FileExists(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).DirectoryName, "resume.dat")) Then
+                Dim resume_dat As Dictionary(Of String, Object)
+
+                resume_dat = DirectCast(Bencode.Decode(System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).DirectoryName, "resume.dat"))), Dictionary(Of String, Object))
+                If resume_dat.ContainsKey(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).Name) Then
+                    Dim current_torrent As Dictionary(Of String, Object)
+
+                    current_torrent = DirectCast(resume_dat(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).Name), Dictionary(Of String, Object))
+                    If current_torrent.ContainsKey("path") Then
+                        Dim path As String
+
+                        path = System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte()))
+                        fbd.SelectedPath = path
+                    End If
+                End If
+            End If
             If fbd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
                 FileA.Text = fbd.SelectedPath
             End If
@@ -259,6 +275,23 @@
             ofd.CheckFileExists = True
             ofd.CheckPathExists = True
             ofd.Multiselect = False
+            If My.Computer.FileSystem.FileExists(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).DirectoryName, "resume.dat")) Then
+                Dim resume_dat As Dictionary(Of String, Object)
+
+                resume_dat = DirectCast(Bencode.Decode(System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).DirectoryName, "resume.dat"))), Dictionary(Of String, Object))
+                If resume_dat.ContainsKey(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).Name) Then
+                    Dim current_torrent As Dictionary(Of String, Object)
+
+                    current_torrent = DirectCast(resume_dat(My.Computer.FileSystem.GetFileInfo(TorrentFile.Text).Name), Dictionary(Of String, Object))
+                    If current_torrent.ContainsKey("path") Then
+                        Dim path As String
+
+                        path = System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte()))
+                        ofd.InitialDirectory = My.Computer.FileSystem.GetFileInfo(path).DirectoryName
+                        ofd.FileName = My.Computer.FileSystem.GetFileInfo(path).Name
+                    End If
+                End If
+            End If
             If ofd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
                 FileA.Text = ofd.FileName
             End If
@@ -305,6 +338,7 @@
             sfd.FileName = FileA.Text
             Dim fi As New System.IO.FileInfo(FileA.Text)
             sfd.InitialDirectory = fi.DirectoryName
+            sfd.FileName = fi.Name
             If sfd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
                 FileTarget.Text = sfd.FileName
             End If
@@ -367,11 +401,9 @@
             CheckA.Enabled = System.IO.File.Exists(FileA.Text)
         End If
         CompleteA.Visible = False
-        If CheckA.Enabled And CheckB.Enabled Then
-            lblTarget.Enabled = True
-            FileTarget.Enabled = True
-            FindTarget.Enabled = True
-        End If
+        lblTarget.Enabled = CheckA.Enabled And CheckB.Enabled
+        FileTarget.Enabled = CheckA.Enabled And CheckB.Enabled
+        FindTarget.Enabled = CheckA.Enabled And CheckB.Enabled
     End Sub
 
     Private Sub FileB_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles FileB.TextChanged
@@ -381,11 +413,9 @@
             CheckB.Enabled = System.IO.File.Exists(FileB.Text)
         End If
         CompleteB.Visible = False
-        If CheckA.Enabled And CheckB.Enabled Then
-            lblTarget.Enabled = True
-            FileTarget.Enabled = True
-            FindTarget.Enabled = True
-        End If
+        lblTarget.Enabled = CheckA.Enabled And CheckB.Enabled
+        FileTarget.Enabled = CheckA.Enabled And CheckB.Enabled
+        FindTarget.Enabled = CheckA.Enabled And CheckB.Enabled
     End Sub
 
     Private Sub FileTarget_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles FileTarget.TextChanged

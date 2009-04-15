@@ -205,7 +205,7 @@ Partial Class MainForm
         '
         Me.lblTarget.AutoSize = True
         Me.lblTarget.Enabled = False
-        Me.lblTarget.Location = New System.Drawing.Point(15, 104)
+        Me.lblTarget.Location = New System.Drawing.Point(12, 104)
         Me.lblTarget.Name = "lblTarget"
         Me.lblTarget.Size = New System.Drawing.Size(75, 13)
         Me.lblTarget.TabIndex = 16
