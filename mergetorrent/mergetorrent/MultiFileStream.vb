@@ -81,9 +81,12 @@
             If current_stream IsNot Nothing Then
                 If new_current_file = current_file Then
                     current_stream.Position = value - new_current_pos
+                Else
+                    current_stream.Close()
+                    current_stream = Nothing
                 End If
-            End If
 
+            End If
             current_filepos = value - new_current_pos
             current_file = new_current_file
             current_pos = value

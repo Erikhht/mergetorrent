@@ -218,9 +218,8 @@
     'End Function
 
     Private Sub btnStart_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnStart.Click
-        Dim useful_listitem_index As Integer = 0
         Dim current_listitem_index As Integer = 0
-        Do
+        Do While current_listitem_index < lbxSources.Items.Count
             Dim current_listitem As ListItemInfo = DirectCast(lbxSources.Items(current_listitem_index), ListItemInfo)
             If current_listitem.Type = ListItemInfo.ListItemType.Torrent Then
                 Dim torrent As Dictionary(Of String, Object)
@@ -330,7 +329,6 @@
                         complete_pieces += 20
                         out_stream.Write(buffer, 0, CInt(read_len))
                         useful_permutation = in_stream.GetPermutation
-                        useful_listitem_index = current_listitem_index
                         pieces_position += 20
                     Else
                         'no match, try the next permutation
@@ -350,7 +348,7 @@
                 My.Application.DoEvents()
                 last_doevents = Now
             End If
-            current_listitem_index = (current_listitem_index + 1) Mod lbxSources.Items.Count
-        Loop While current_listitem_index <> useful_listitem_index
+            current_listitem_index = current_listitem_index + 1
+        Loop
     End Sub
 End Class
