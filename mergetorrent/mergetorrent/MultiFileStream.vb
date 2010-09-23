@@ -1,10 +1,46 @@
 ﻿Public Class MultiFileStream
     Inherits System.IO.Stream
 
-    Public Structure FileInfo
-        Dim Path As List(Of String)
-        Dim Length As Long
-    End Structure
+    Public Class FileInfo
+        Dim Path_ As List(Of String)
+        Dim Length_ As Long
+
+        Public ReadOnly Property Path(ByVal index As Integer) As String
+            Get
+                Return Path_(index)
+            End Get
+        End Property
+
+        Public ReadOnly Property Path As List(Of String)
+            Get
+                Dim ret As New List(Of String)
+                For Each s As String In Path_
+                    ret.Add(s)
+                Next
+                Return ret
+            End Get
+        End Property
+
+        Public ReadOnly Property Length As Long
+            Get
+                Return Length_
+            End Get
+        End Property
+
+        Public Sub New(ByVal filename As String, ByVal length As Long)
+            Me.Length_ = length
+            Me.Path_ = New List(Of String)
+            Me.Path_.Add(filename)
+        End Sub
+
+        Public Sub New(ByVal filenames As List(Of String), ByVal length As Long)
+            Me.Length_ = length
+            Me.Path_ = New List(Of String)
+            For Each filename As String In filenames
+                Me.Path_.Add(filename)
+            Next
+        End Sub
+    End Class
 
     Protected files As List(Of FileInfo)
     Dim current_file As Integer
@@ -17,8 +53,7 @@
     Dim file_access As System.IO.FileAccess
     Dim file_share As System.IO.FileShare
 
-    Public Sub New(ByVal files As List(Of FileInfo), ByVal file_mode As System.IO.FileMode, ByVal file_access As System.IO.FileAccess, ByVal file_share As System.IO.FileShare)
-        MyBase.New()
+    Public Sub Init(ByVal files As List(Of FileInfo), ByVal file_mode As System.IO.FileMode, ByVal file_access As System.IO.FileAccess, ByVal file_share As System.IO.FileShare)
         Me.files = files
         Me.file_mode = file_mode
         Me.file_access = file_access
@@ -31,6 +66,17 @@
         For i As Integer = 0 To files.Count
             current_permutation.Add(0)
         Next
+    End Sub
+
+    Public Sub New(ByVal files As List(Of FileInfo), ByVal file_mode As System.IO.FileMode, ByVal file_access As System.IO.FileAccess, ByVal file_share As System.IO.FileShare)
+        MyBase.New()
+        Init(files, file_mode, file_access, file_share)
+    End Sub
+
+    Public Sub New(ByVal file As FileInfo, ByVal file_mode As System.IO.FileMode, ByVal file_access As System.IO.FileAccess, ByVal file_share As System.IO.FileShare)
+        Dim lfi As New List(Of FileInfo)
+        lfi.Add(file)
+        Init(lfi, file_mode, file_access, file_share)
     End Sub
 
     Public Overrides ReadOnly Property CanRead() As Boolean
@@ -147,8 +193,12 @@
         Loop While Position + Length - 1 >= current_pos + files(current_file).Length
     End Function
 
-    Protected Overridable Function GetStream(ByVal current_file As Integer) As System.IO.Stream
-        GetStream = System.IO.File.Open(files(current_file).Path(current_permutation(current_file)), file_mode, file_access, file_share)
+    Private Function GetCurrentFileName() As String
+        Return files(current_file).Path(current_permutation(current_file))
+    End Function
+
+    Private Function GetStream(ByVal current_file As Integer) As System.IO.Stream
+        GetStream = System.IO.File.Open(GetCurrentFileName(), file_mode, file_access, file_share)
         If GetStream.Length <> files(current_file).Length Then
             GetStream.SetLength(files(current_file).Length)
         End If
