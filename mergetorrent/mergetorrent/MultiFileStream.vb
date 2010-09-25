@@ -103,10 +103,15 @@
 
     Public Overrides ReadOnly Property Length() As Long
         Get
-            Length = 0
+            Static memoized_length As Long = -1
+            If memoized_length <> -1 Then
+                Return memoized_length
+            End If
+            memoized_length = 0
             For Each file As FileInfo In files
-                Length += file.Length
+                memoized_length += file.Length
             Next
+            Return memoized_length
         End Get
     End Property
 
@@ -115,15 +120,15 @@
             Return current_pos
         End Get
         Set(ByVal value As Long)
+            If value > Length Then
+                Throw New ApplicationException("Can't move beyond end of files")
+            End If
             Dim new_current_pos As Long = 0
             Dim new_current_file As Integer = 0
             Do While new_current_file < files.Count AndAlso new_current_pos + files(new_current_file).Length <= value
                 new_current_pos += files(new_current_file).Length
                 new_current_file += 1
             Loop
-            If value > new_current_pos + files(new_current_file).Length Then
-                Throw New ApplicationException("Can't move beyond end of files")
-            End If
             If current_stream IsNot Nothing Then
                 If new_current_file = current_file Then
                     current_stream.Position = value - new_current_pos

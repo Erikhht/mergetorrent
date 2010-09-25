@@ -178,6 +178,8 @@
     End Function
 
     Private Sub btnStart_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnStart.Click
+        btnStart.Enabled = False
+        btnStart.Text = "Running..."
         Dim current_listitem_index As Integer = 0
         Do While current_listitem_index < lbxSources.Items.Count
             Dim current_listitem As ListItemInfo = DirectCast(lbxSources.Items(current_listitem_index), ListItemInfo)
@@ -196,13 +198,17 @@
                 Dim lfi As New List(Of MultiFileStream.FileInfo)
                 For Each fi As MultiFileStream.FileInfo In files
                     Dim new_paths As List(Of String) = FindAllByLength(fi.Length)
-                    If new_paths.IndexOf(fi.Path(0)) <> 0 Then 'make it first even if it's not there
+                    If new_paths.Contains(fi.Path(0)) AndAlso new_paths.IndexOf(fi.Path(0)) <> 0 Then 'make it first if it's there
                         new_paths.Remove(fi.Path(0))
                         new_paths.Insert(0, fi.Path(0))
                     End If
 
                     Dim new_fi As New MultiFileStream.FileInfo(new_paths, fi.Length)
                     lfi.Add(new_fi)
+
+                    current_listitem.Status &= "."
+                    lbxSources.Items(current_listitem_index) = current_listitem
+                    My.Application.DoEvents()
                 Next
                 in_stream = New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
 
@@ -222,7 +228,7 @@
                 Dim pieces() As Byte = DirectCast(info("pieces"), Byte())
                 Dim pieces_position As Integer = 0
                 Dim complete_pieces As Int64 = 0
-                Dim doevents_period As TimeSpan = New TimeSpan(0, 0, 0, 1) 'every 1 second
+                Dim doevents_period As TimeSpan = New TimeSpan(0, 0, 0, 0, 500) 'every 1/2 second
                 Dim last_doevents As Date = Date.MinValue
 
                 Do While pieces_position < pieces.Length
@@ -285,5 +291,7 @@
             End If
             current_listitem_index = current_listitem_index + 1
         Loop
+        btnStart.Enabled = True
+        btnStart.Text = "Start!"
     End Sub
 End Class
