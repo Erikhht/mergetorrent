@@ -13,6 +13,7 @@
         Property Type As ListItemType
         Property Completion As Double = -1
         Property Checked As Double = -1
+        Property Recovered As Double = -1
         Property Status As String = ""
 
         Sub New(ByVal Path As String, ByVal Type As ListItemType)
@@ -27,6 +28,9 @@
             End If
             If Checked >= 0 Then
                 ToString &= vbTab & "Checked: " & Checked.ToString("P02")
+            End If
+            If Recovered >= 0 Then
+                ToString &= vbTab & "Recovered: " & Recovered.ToString("P02")
             End If
             If Status.Length > 0 Then
                 ToString &= " " & Status
@@ -80,11 +84,39 @@
         End If
     End Sub
 
-    Private Function TorrentFilenameToMultiPath(ByVal torrent_filename As String) As List(Of MultiFileStream.FileInfo)
-        TorrentFilenameToMultiPath = New List(Of MultiFileStream.FileInfo)
-        Dim resume_dat_fs As System.IO.FileStream = System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat"))
+    Private Function GetResumeDat() As Dictionary(Of String, Object)
+        Dim resume_dat_fs As System.IO.FileStream
+        If System.IO.File.Exists(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat")) Then
+            resume_dat_fs = System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat"))
+        Else
+            Dim ofd As New OpenFileDialog
+
+            ofd.AddExtension = True
+            ofd.AutoUpgradeEnabled = True
+            ofd.CheckFileExists = True
+            ofd.CheckPathExists = True
+            ofd.DefaultExt = ".dat"
+            ofd.DereferenceLinks = True
+            ofd.Filter = "resume.dat|resume.dat|All files (*.*)|*.*"
+            ofd.Title = "Open resume.dat"
+            If System.IO.Directory.Exists(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")) Then
+                ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
+            End If
+            ofd.Multiselect = False
+            If ofd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
+                resume_dat_fs = System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat"))
+            Else
+                Throw New ApplicationException("Can't find resume.dat")
+            End If
+        End If
         Dim resume_dat As Dictionary(Of String, Object) = DirectCast(Bencode.Decode(resume_dat_fs), Dictionary(Of String, Object))
         resume_dat_fs.Close()
+        Return resume_dat
+    End Function
+
+    Private Function TorrentFilenameToMultiPath(ByVal torrent_filename As String) As List(Of MultiFileStream.FileInfo)
+        TorrentFilenameToMultiPath = New List(Of MultiFileStream.FileInfo)
+        Dim resume_dat As Dictionary(Of String, Object) = GetResumeDat()
 
         Dim torrent_fs As System.IO.FileStream = System.IO.File.OpenRead(torrent_filename)
         Dim torrent As Dictionary(Of String, Object) = DirectCast(Bencode.Decode(torrent_fs), Dictionary(Of String, Object))
@@ -157,22 +189,13 @@
                        My.Computer.FileSystem.GetFileInfo(possible_source.Path).Length = target_length Then
                         FindAllByLength.Add(possible_source.Path)
                     End If
-
                 Case ListItemInfo.ListItemType.Directory
-                    Dim directory_stack As New Queue(Of System.IO.DirectoryInfo)
-                    directory_stack.Enqueue(My.Computer.FileSystem.GetDirectoryInfo(possible_source.Path))
-                    Do While directory_stack.Count > 0
-                        For Each f As System.IO.FileInfo In directory_stack.Peek.GetFiles
-                            If Not FindAllByLength.Contains(f.FullName) AndAlso _
-                               f.Length = target_length Then
-                                FindAllByLength.Add(f.FullName)
-                            End If
-                        Next
-                        For Each d As System.IO.DirectoryInfo In directory_stack.Peek.GetDirectories
-                            directory_stack.Enqueue(d)
-                        Next
-                        directory_stack.Dequeue() 'don't need it anymore
-                    Loop
+                    For Each f As System.IO.FileInfo In My.Computer.FileSystem.GetDirectoryInfo(possible_source.Path).GetFiles("*", IO.SearchOption.AllDirectories)
+                        If Not FindAllByLength.Contains(f.FullName) AndAlso _
+                           f.Length = target_length Then
+                            FindAllByLength.Add(f.FullName)
+                        End If
+                    Next
             End Select
         Next
     End Function
@@ -227,14 +250,16 @@
                 Dim hash_result() As Byte
                 Dim pieces() As Byte = DirectCast(info("pieces"), Byte())
                 Dim pieces_position As Integer = 0
-                Dim complete_pieces As Int64 = 0
+                Dim complete_bytes As Long = 0
+                Dim recovered_bytes As Long = 0
                 Dim doevents_period As TimeSpan = New TimeSpan(0, 0, 0, 0, 500) 'every 1/2 second
                 Dim last_doevents As Date = Date.MinValue
 
                 Do While pieces_position < pieces.Length
                     If last_doevents + doevents_period <= Now Then
-                        current_listitem.Completion = CDbl(complete_pieces) / CDbl(pieces.Length)
-                        current_listitem.Checked = CDbl(pieces_position) / CDbl(pieces.Length)
+                        current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length)
+                        current_listitem.Checked = CDbl(out_stream.Position) / CDbl(out_stream.Length)
+                        current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length)
                         lbxSources.Items(current_listitem_index) = current_listitem
                         My.Application.DoEvents()
                         last_doevents = Now
@@ -252,7 +277,7 @@
                     If i = 20 Then
                         'match!  No need to read from the in_stream
                         in_stream.Position += read_len
-                        complete_pieces += 20
+                        complete_bytes += read_len
                     Else
                         out_stream.Position -= read_len 'back up
                         Dim useful_permutation As List(Of Integer) = in_stream.GetPermutation()
@@ -265,13 +290,14 @@
                             Loop
                             If i = 20 Then
                                 'match!
-                                complete_pieces += 20
+                                complete_bytes += read_len
+                                recovered_bytes += read_len
                                 out_stream.Write(buffer, 0, read_len)
                                 Exit Do
                             Else
                                 'no match, try the next permutation
                                 in_stream.NextPermutation(in_stream.Position - read_len, read_len)
-                                If (MultiFileStream.ComparePermutation(in_stream.GetPermutation, useful_permutation)) Then
+                                If MultiFileStream.ComparePermutation(in_stream.GetPermutation, useful_permutation) Then
                                     'this piece can't be completed, let's move on
                                     out_stream.Position += read_len
                                     Exit Do
@@ -283,8 +309,9 @@
                     End If
                     pieces_position += 20
                 Loop
-                current_listitem.Completion = CDbl(complete_pieces) / CDbl(pieces.Length)
-                current_listitem.Checked = CDbl(pieces_position) / CDbl(pieces.Length)
+                current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length)
+                current_listitem.Checked = CDbl(out_stream.Position) / CDbl(out_stream.Length)
+                current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length)
                 lbxSources.Items(current_listitem_index) = current_listitem
                 My.Application.DoEvents()
                 last_doevents = Now
@@ -293,5 +320,9 @@
         Loop
         btnStart.Enabled = True
         btnStart.Text = "Start!"
+    End Sub
+
+    Private Sub lnkMergeTorrent_LinkClicked(ByVal sender As System.Object, ByVal e As System.Windows.Forms.LinkLabelLinkClickedEventArgs) Handles lnkMergeTorrent.LinkClicked
+        Process.Start("http://code.google.com/p/mergetorrent/")
     End Sub
 End Class
