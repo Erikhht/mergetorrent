@@ -2,40 +2,91 @@
 
     Private Const SHA1_HASHBYTES As Int64 = 20
 
-    Private Class ListItemInfo
-        Enum ListItemType
+    Private Class SourceItem
+        Inherits ListViewItem
+
+        Enum SourceItemType
             Torrent
             Directory
             File
         End Enum
 
+        Private path_ As String
+        Private Type_ As SourceItemType
+        Private Processed_ As Double = -1
+        Private Completion_ As Double = -1
+        Private Recovered_ As Double = -1
+        Private Status_ As String = ""
+
         Property Path As String
-        Property Type As ListItemType
-        Property Completion As Double = -1
-        Property Checked As Double = -1
-        Property Recovered As Double = -1
-        Property Status As String = ""
+            Get
+                Return path_
+            End Get
+            Set(ByVal value As String)
+                path_ = value
+            End Set
+        End Property
 
-        Sub New(ByVal Path As String, ByVal Type As ListItemType)
+        ReadOnly Property Type As SourceItemType
+            Get
+                Return Type_
+            End Get
+        End Property
+
+        Property Processed As Double
+            Get
+                Return Processed_
+            End Get
+            Set(ByVal value As Double)
+                Processed_ = value
+                Me.SubItems(0).Text = Processed_.ToString("P02")
+            End Set
+        End Property
+
+        Property Completion As Double
+            Get
+                Return Completion_
+            End Get
+            Set(ByVal value As Double)
+                Completion_ = value
+                Me.SubItems(1).Text = Completion_.ToString("P02")
+            End Set
+        End Property
+
+        Property Recovered As Double
+            Get
+                Return Recovered_
+            End Get
+            Set(ByVal value As Double)
+                Recovered_ = value
+                Me.SubItems(2).Text = Recovered_.ToString("P02")
+            End Set
+        End Property
+
+        Property Status As String
+            Get
+                Return Status_
+            End Get
+            Set(ByVal value As String)
+                Status_ = value
+                Me.SubItems(3).Text = Status_
+            End Set
+        End Property
+
+        Sub New(ByVal Path As String, ByVal Type As SourceItemType)
+            If Type = SourceItemType.Torrent Then
+                Me.ToolTipText = Path
+                Me.Text = My.Computer.FileSystem.GetName(Path)
+                Me.SubItems.Add("") 'processed
+                Me.SubItems.Add("") 'completion
+                Me.SubItems.Add("") 'recovered
+                Me.SubItems.Add("") 'status
+            Else
+                Me.Text = Path
+            End If
             Me.Path = Path
-            Me.Type = Type
+            Me.Type_ = Type
         End Sub
-
-        Public Overrides Function ToString() As String
-            ToString = Type.ToString & ": " & Path.ToString
-            If Completion >= 0 Then
-                ToString &= vbTab & "Verified: " & Completion.ToString("P02")
-            End If
-            If Checked >= 0 Then
-                ToString &= vbTab & "Checked: " & Checked.ToString("P02")
-            End If
-            If Recovered >= 0 Then
-                ToString &= vbTab & "Recovered: " & Recovered.ToString("P02")
-            End If
-            If Status.Length > 0 Then
-                ToString &= " " & Status
-            End If
-        End Function
     End Class
 
     Private Sub btnAddTorrents_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnAddTorrents.Click
@@ -52,12 +103,15 @@
             ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
         End If
         ofd.Multiselect = True
+        ofd.Title = "Find Torrent(s)"
         If ofd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
             For Each filename As String In ofd.FileNames
-                lbxSources.Items.Add(New ListItemInfo(filename, ListItemInfo.ListItemType.Torrent))
+                Dim si As New SourceItem(filename, SourceItem.SourceItemType.Torrent)
+                si.Group = lvSources.Groups("lvgTorrents")
+                lvSources.Items.Add(si)
             Next
         End If
-        lbxSources_ItemCountChanged(Me, Nothing)
+        lvSources_ItemCountChanged(Me, Nothing)
     End Sub
 
     Private Sub btnAddFiles_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnAddFiles.Click
@@ -70,49 +124,59 @@
         ofd.DereferenceLinks = True
         ofd.Filter = "All files (*.*)|*.*"
         ofd.Multiselect = True
+        ofd.Title = "Find Source File(s)"
         If ofd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
             For Each filename As String In ofd.FileNames
-                lbxSources.Items.Add(New ListItemInfo(filename, ListItemInfo.ListItemType.File))
+                Dim si As New SourceItem(filename, SourceItem.SourceItemType.File)
+                si.Group = lvSources.Groups("lvgFilesAndDirectories")
+                lvSources.Items.Add(si)
             Next
         End If
-        lbxSources_ItemCountChanged(Me, Nothing)
+        lvSources_ItemCountChanged(Me, Nothing)
     End Sub
 
     Private Sub btnAddDirectory_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnAddDirectory.Click
         Dim fbd As New FolderBrowserDialog
-        fbd.ShowNewFolderButton = True
+        fbd.ShowNewFolderButton = False
+        fbd.Description = "Find Source Directory (all subdirectories will be included)"
         If fbd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
-            lbxSources.Items.Add(New ListItemInfo(fbd.SelectedPath, ListItemInfo.ListItemType.Directory))
+            Dim si As New SourceItem(fbd.SelectedPath, SourceItem.SourceItemType.Directory)
+            si.Group = lvSources.Groups("lvgFilesAndDirectories")
+            lvSources.Items.Add(si)
         End If
-        lbxSources_ItemCountChanged(Me, Nothing)
+        lvSources_ItemCountChanged(Me, Nothing)
     End Sub
 
-    Private Sub lbxSources_SelectedIndexChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles lbxSources.SelectedIndexChanged
-        btnClear.Enabled = lbxSources.SelectedIndex <> ListBox.NoMatches
+    Private Sub lvSources_SelectedIndexChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles lvSources.SelectedIndexChanged
+        btnClear.Enabled = lvSources.SelectedIndices.Count > 0
     End Sub
 
-    Private Sub lbxSources_ItemCountChanged(ByVal sender As System.Object, ByVal e As System.EventArgs)
-        btnClearAll.Enabled = lbxSources.Items.Count > 0
+    Private Sub lvSources_ItemCountChanged(ByVal sender As System.Object, ByVal e As System.EventArgs)
+        btnClearAll.Enabled = lvSources.Items.Count > 0
         btnStart.Enabled = False
-        For Each li As ListItemInfo In lbxSources.Items
-            If li.Type = ListItemInfo.ListItemType.Torrent Then
+        For Each li As SourceItem In lvSources.Items
+            If li.Type = SourceItem.SourceItemType.Torrent Then
                 btnStart.Enabled = True
             End If
         Next
     End Sub
 
     Private Sub btnClear_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnClear.Click
-        If lbxSources.SelectedIndex <> ListBox.NoMatches Then
-            lbxSources.Items.RemoveAt(lbxSources.SelectedIndex)
+        If lvSources.SelectedIndices.Count > 0 Then
+            For i As Integer = lvSources.Items.Count - 1 To 0 Step -1
+                If lvSources.Items(i).Selected Then
+                    lvSources.Items.RemoveAt(i)
+                End If
+            Next
         End If
-        lbxSources_ItemCountChanged(Me, Nothing)
+        lvSources_ItemCountChanged(Me, Nothing)
     End Sub
 
     Private Sub btnClearAll_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnClearAll.Click
-        If lbxSources.Items.Count > 0 Then
-            lbxSources.Items.Clear()
+        If lvSources.Items.Count > 0 Then
+            lvSources.Items.Clear()
         End If
-        lbxSources_ItemCountChanged(Me, Nothing)
+        lvSources_ItemCountChanged(Me, Nothing)
     End Sub
 
     Private Sub lnkMergeTorrent_LinkClicked(ByVal sender As System.Object, ByVal e As System.Windows.Forms.LinkLabelLinkClickedEventArgs) Handles lnkMergeTorrent.LinkClicked
@@ -199,9 +263,9 @@
     Private Function FindAllByLength(ByVal target_length As Long) As List(Of String)
         FindAllByLength = New List(Of String)
 
-        For Each possible_source As ListItemInfo In lbxSources.Items
+        For Each possible_source As SourceItem In lvSources.Items
             Select Case possible_source.Type
-                Case ListItemInfo.ListItemType.Torrent
+                Case SourceItem.SourceItemType.Torrent
                     Dim br As New System.IO.BinaryReader(System.IO.File.OpenRead(possible_source.Path))
                     Dim possible_source_torrent As Dictionary(Of String, Object) = Bencode.DecodeDictionary(br)
                     br.Close()
@@ -218,13 +282,13 @@
                             End If
                         Next
                     Next
-                Case ListItemInfo.ListItemType.File
+                Case SourceItem.SourceItemType.File
                     If Not FindAllByLength.Contains(possible_source.Path) AndAlso _
                        My.Computer.FileSystem.FileExists(possible_source.Path) AndAlso _
                        My.Computer.FileSystem.GetFileInfo(possible_source.Path).Length = target_length Then
                         FindAllByLength.Add(possible_source.Path)
                     End If
-                Case ListItemInfo.ListItemType.Directory
+                Case SourceItem.SourceItemType.Directory
                     'we don't use GetFiles recursive feature because there might be some directories that we can't read.
                     Dim directory_stack As New Queue(Of System.IO.DirectoryInfo)
                     directory_stack.Enqueue(My.Computer.FileSystem.GetDirectoryInfo(possible_source.Path))
@@ -256,19 +320,19 @@
         btnStart.Enabled = False
         btnStart.Text = "Running..."
         Dim current_listitem_index As Integer = 0
-        Do While current_listitem_index < lbxSources.Items.Count
-            Dim current_listitem As ListItemInfo = DirectCast(lbxSources.Items(current_listitem_index), ListItemInfo)
-            If current_listitem.Type = ListItemInfo.ListItemType.Torrent Then
+        Do While current_listitem_index < lvSources.Items.Count
+            Dim current_listitem As SourceItem = DirectCast(lvSources.Items(current_listitem_index), SourceItem)
+            If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
                 Dim out_stream As MultiFileStream
                 Dim in_stream As MultiFileStream
                 current_listitem.Status = "Finding destination files..."
-                lbxSources.Items(current_listitem_index) = current_listitem
+                lvSources.Items(current_listitem_index) = current_listitem
                 My.Application.DoEvents()
                 Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path)
                 out_stream = New MultiFileStream(files, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
 
                 current_listitem.Status = "Finding source files..."
-                lbxSources.Items(current_listitem_index) = current_listitem
+                lvSources.Items(current_listitem_index) = current_listitem
                 My.Application.DoEvents()
                 Dim lfi As New List(Of MultiFileStream.FileInfo)
                 For Each fi As MultiFileStream.FileInfo In files
@@ -282,7 +346,7 @@
                     lfi.Add(new_fi)
 
                     current_listitem.Status &= "."
-                    lbxSources.Items(current_listitem_index) = current_listitem
+                    lvSources.Items(current_listitem_index) = current_listitem
                     My.Application.DoEvents()
                 Next
                 in_stream = New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
@@ -310,9 +374,9 @@
                 Do While pieces_position < pieces.Length
                     If last_doevents + doevents_period <= Now Then
                         current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length)
-                        current_listitem.Checked = CDbl(out_stream.Position) / CDbl(out_stream.Length)
+                        current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length)
                         current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length)
-                        lbxSources.Items(current_listitem_index) = current_listitem
+                        lvSources.Items(current_listitem_index) = current_listitem
                         My.Application.DoEvents()
                         last_doevents = Now
                     End If
@@ -362,9 +426,9 @@
                     pieces_position += 20
                 Loop
                 current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length)
-                current_listitem.Checked = CDbl(out_stream.Position) / CDbl(out_stream.Length)
+                current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length)
                 current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length)
-                lbxSources.Items(current_listitem_index) = current_listitem
+                lvSources.Items(current_listitem_index) = current_listitem
                 My.Application.DoEvents()
                 last_doevents = Now
             End If
