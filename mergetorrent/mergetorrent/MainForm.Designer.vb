@@ -36,6 +36,7 @@ Partial Class MainForm
         Me.colVerified = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.colComplete = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.colRecovered = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.colStatus = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.SuspendLayout()
         '
         'btnAddTorrents
@@ -118,7 +119,7 @@ Partial Class MainForm
         Me.lvSources.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
                     Or System.Windows.Forms.AnchorStyles.Left) _
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colVerified, Me.colComplete, Me.colRecovered})
+        Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colVerified, Me.colComplete, Me.colRecovered, Me.colStatus})
         Me.lvSources.FullRowSelect = True
         ListViewGroup1.Header = "Torrents"
         ListViewGroup1.Name = "lvgTorrents"
@@ -136,7 +137,7 @@ Partial Class MainForm
         'colName
         '
         Me.colName.Text = "Name"
-        Me.colName.Width = 650
+        Me.colName.Width = 460
         '
         'colVerified
         '
@@ -152,6 +153,11 @@ Partial Class MainForm
         '
         Me.colRecovered.Text = "Recovered"
         Me.colRecovered.Width = 70
+        '
+        'colStatus
+        '
+        Me.colStatus.Text = "Status"
+        Me.colStatus.Width = 187
         '
         'MainForm
         '
@@ -184,5 +190,6 @@ Partial Class MainForm
     Friend WithEvents colVerified As System.Windows.Forms.ColumnHeader
     Friend WithEvents colComplete As System.Windows.Forms.ColumnHeader
     Friend WithEvents colRecovered As System.Windows.Forms.ColumnHeader
+    Friend WithEvents colStatus As System.Windows.Forms.ColumnHeader
 
 End Class
