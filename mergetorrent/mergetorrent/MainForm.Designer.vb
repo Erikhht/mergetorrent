@@ -28,6 +28,8 @@ Partial Class MainForm
         Me.btnAddDirectory = New System.Windows.Forms.Button()
         Me.btnStart = New System.Windows.Forms.Button()
         Me.lnkMergeTorrent = New System.Windows.Forms.LinkLabel()
+        Me.btnClear = New System.Windows.Forms.Button()
+        Me.btnClearAll = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'lbxSources
@@ -39,13 +41,13 @@ Partial Class MainForm
         Me.lbxSources.IntegralHeight = False
         Me.lbxSources.Location = New System.Drawing.Point(9, 12)
         Me.lbxSources.Name = "lbxSources"
-        Me.lbxSources.Size = New System.Drawing.Size(636, 316)
+        Me.lbxSources.Size = New System.Drawing.Size(862, 316)
         Me.lbxSources.TabIndex = 0
         '
         'btnAddTorrents
         '
         Me.btnAddTorrents.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnAddTorrents.Location = New System.Drawing.Point(651, 12)
+        Me.btnAddTorrents.Location = New System.Drawing.Point(877, 12)
         Me.btnAddTorrents.Name = "btnAddTorrents"
         Me.btnAddTorrents.Size = New System.Drawing.Size(119, 28)
         Me.btnAddTorrents.TabIndex = 1
@@ -55,7 +57,7 @@ Partial Class MainForm
         'btnAddFiles
         '
         Me.btnAddFiles.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnAddFiles.Location = New System.Drawing.Point(651, 46)
+        Me.btnAddFiles.Location = New System.Drawing.Point(877, 46)
         Me.btnAddFiles.Name = "btnAddFiles"
         Me.btnAddFiles.Size = New System.Drawing.Size(119, 28)
         Me.btnAddFiles.TabIndex = 2
@@ -65,7 +67,7 @@ Partial Class MainForm
         'btnAddDirectory
         '
         Me.btnAddDirectory.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnAddDirectory.Location = New System.Drawing.Point(651, 80)
+        Me.btnAddDirectory.Location = New System.Drawing.Point(877, 80)
         Me.btnAddDirectory.Name = "btnAddDirectory"
         Me.btnAddDirectory.Size = New System.Drawing.Size(119, 28)
         Me.btnAddDirectory.TabIndex = 3
@@ -75,7 +77,8 @@ Partial Class MainForm
         'btnStart
         '
         Me.btnStart.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnStart.Location = New System.Drawing.Point(651, 300)
+        Me.btnStart.Enabled = False
+        Me.btnStart.Location = New System.Drawing.Point(877, 300)
         Me.btnStart.Name = "btnStart"
         Me.btnStart.Size = New System.Drawing.Size(119, 28)
         Me.btnStart.TabIndex = 4
@@ -84,19 +87,44 @@ Partial Class MainForm
         '
         'lnkMergeTorrent
         '
+        Me.lnkMergeTorrent.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lnkMergeTorrent.AutoSize = True
-        Me.lnkMergeTorrent.Location = New System.Drawing.Point(651, 284)
+        Me.lnkMergeTorrent.Location = New System.Drawing.Point(877, 284)
         Me.lnkMergeTorrent.Name = "lnkMergeTorrent"
         Me.lnkMergeTorrent.Size = New System.Drawing.Size(119, 13)
         Me.lnkMergeTorrent.TabIndex = 5
         Me.lnkMergeTorrent.TabStop = True
         Me.lnkMergeTorrent.Text = "mergetorrent homepage"
         '
+        'btnClear
+        '
+        Me.btnClear.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.btnClear.Enabled = False
+        Me.btnClear.Location = New System.Drawing.Point(877, 131)
+        Me.btnClear.Name = "btnClear"
+        Me.btnClear.Size = New System.Drawing.Size(119, 28)
+        Me.btnClear.TabIndex = 6
+        Me.btnClear.Text = "Clear"
+        Me.btnClear.UseVisualStyleBackColor = True
+        '
+        'btnClearAll
+        '
+        Me.btnClearAll.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.btnClearAll.Enabled = False
+        Me.btnClearAll.Location = New System.Drawing.Point(877, 165)
+        Me.btnClearAll.Name = "btnClearAll"
+        Me.btnClearAll.Size = New System.Drawing.Size(119, 28)
+        Me.btnClearAll.TabIndex = 7
+        Me.btnClearAll.Text = "Clear All"
+        Me.btnClearAll.UseVisualStyleBackColor = True
+        '
         'MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(782, 340)
+        Me.ClientSize = New System.Drawing.Size(1008, 340)
+        Me.Controls.Add(Me.btnClearAll)
+        Me.Controls.Add(Me.btnClear)
         Me.Controls.Add(Me.lnkMergeTorrent)
         Me.Controls.Add(Me.btnStart)
         Me.Controls.Add(Me.btnAddDirectory)
@@ -115,5 +143,7 @@ Partial Class MainForm
     Friend WithEvents btnAddDirectory As System.Windows.Forms.Button
     Friend WithEvents btnStart As System.Windows.Forms.Button
     Friend WithEvents lnkMergeTorrent As System.Windows.Forms.LinkLabel
+    Friend WithEvents btnClear As System.Windows.Forms.Button
+    Friend WithEvents btnClearAll As System.Windows.Forms.Button
 
 End Class

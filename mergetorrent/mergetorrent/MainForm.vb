@@ -57,6 +57,7 @@
                 lbxSources.Items.Add(New ListItemInfo(filename, ListItemInfo.ListItemType.Torrent))
             Next
         End If
+        lbxSources_ItemCountChanged(Me, Nothing)
     End Sub
 
     Private Sub btnAddFiles_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnAddFiles.Click
@@ -74,6 +75,7 @@
                 lbxSources.Items.Add(New ListItemInfo(filename, ListItemInfo.ListItemType.File))
             Next
         End If
+        lbxSources_ItemCountChanged(Me, Nothing)
     End Sub
 
     Private Sub btnAddDirectory_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnAddDirectory.Click
@@ -82,6 +84,39 @@
         If fbd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
             lbxSources.Items.Add(New ListItemInfo(fbd.SelectedPath, ListItemInfo.ListItemType.Directory))
         End If
+        lbxSources_ItemCountChanged(Me, Nothing)
+    End Sub
+
+    Private Sub lbxSources_SelectedIndexChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles lbxSources.SelectedIndexChanged
+        btnClear.Enabled = lbxSources.SelectedIndex <> ListBox.NoMatches
+    End Sub
+
+    Private Sub lbxSources_ItemCountChanged(ByVal sender As System.Object, ByVal e As System.EventArgs)
+        btnClearAll.Enabled = lbxSources.Items.Count > 0
+        btnStart.Enabled = False
+        For Each li As ListItemInfo In lbxSources.Items
+            If li.Type = ListItemInfo.ListItemType.Torrent Then
+                btnStart.Enabled = True
+            End If
+        Next
+    End Sub
+
+    Private Sub btnClear_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnClear.Click
+        If lbxSources.SelectedIndex <> ListBox.NoMatches Then
+            lbxSources.Items.RemoveAt(lbxSources.SelectedIndex)
+        End If
+        lbxSources_ItemCountChanged(Me, Nothing)
+    End Sub
+
+    Private Sub btnClearAll_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnClearAll.Click
+        If lbxSources.Items.Count > 0 Then
+            lbxSources.Items.Clear()
+        End If
+        lbxSources_ItemCountChanged(Me, Nothing)
+    End Sub
+
+    Private Sub lnkMergeTorrent_LinkClicked(ByVal sender As System.Object, ByVal e As System.Windows.Forms.LinkLabelLinkClickedEventArgs) Handles lnkMergeTorrent.LinkClicked
+        Process.Start("http://code.google.com/p/mergetorrent/")
     End Sub
 
     Private Function GetResumeDat() As Dictionary(Of String, Object)
@@ -190,12 +225,29 @@
                         FindAllByLength.Add(possible_source.Path)
                     End If
                 Case ListItemInfo.ListItemType.Directory
-                    For Each f As System.IO.FileInfo In My.Computer.FileSystem.GetDirectoryInfo(possible_source.Path).GetFiles("*", IO.SearchOption.AllDirectories)
-                        If Not FindAllByLength.Contains(f.FullName) AndAlso _
-                           f.Length = target_length Then
-                            FindAllByLength.Add(f.FullName)
-                        End If
-                    Next
+                    'we don't use GetFiles recursive feature because there might be some directories that we can't read.
+                    Dim directory_stack As New Queue(Of System.IO.DirectoryInfo)
+                    directory_stack.Enqueue(My.Computer.FileSystem.GetDirectoryInfo(possible_source.Path))
+                    Do While directory_stack.Count > 0
+                        Try
+                            For Each f As System.IO.FileInfo In directory_stack.Peek.GetFiles
+                                If Not FindAllByLength.Contains(f.FullName) AndAlso _
+                                   f.Length = target_length Then
+                                    FindAllByLength.Add(f.FullName)
+                                End If
+                            Next
+                        Catch ex As UnauthorizedAccessException
+                            'do nothing, we'll just skip this directory
+                        End Try
+                        Try
+                            For Each d As System.IO.DirectoryInfo In directory_stack.Peek.GetDirectories
+                                directory_stack.Enqueue(d)
+                            Next
+                        Catch ex As UnauthorizedAccessException
+                            'do nothing, we'll just skip this directory
+                        End Try
+                        directory_stack.Dequeue() 'don't need it anymore
+                    Loop
             End Select
         Next
     End Function
@@ -320,9 +372,5 @@
         Loop
         btnStart.Enabled = True
         btnStart.Text = "Start!"
-    End Sub
-
-    Private Sub lnkMergeTorrent_LinkClicked(ByVal sender As System.Object, ByVal e As System.Windows.Forms.LinkLabelLinkClickedEventArgs) Handles lnkMergeTorrent.LinkClicked
-        Process.Start("http://code.google.com/p/mergetorrent/")
     End Sub
 End Class
