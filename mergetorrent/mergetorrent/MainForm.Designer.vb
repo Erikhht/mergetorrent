@@ -22,8 +22,8 @@ Partial Class MainForm
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim ListViewGroup1 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Torrents", System.Windows.Forms.HorizontalAlignment.Left)
-        Dim ListViewGroup2 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Files And Directories", System.Windows.Forms.HorizontalAlignment.Left)
+        Dim ListViewGroup3 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Torrents", System.Windows.Forms.HorizontalAlignment.Left)
+        Dim ListViewGroup4 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Files And Directories", System.Windows.Forms.HorizontalAlignment.Left)
         Me.btnAddTorrents = New System.Windows.Forms.Button()
         Me.btnAddFiles = New System.Windows.Forms.Button()
         Me.btnAddDirectory = New System.Windows.Forms.Button()
@@ -122,11 +122,11 @@ Partial Class MainForm
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colProcessed, Me.colComplete, Me.colRecovered, Me.colStatus})
         Me.lvSources.FullRowSelect = True
-        ListViewGroup1.Header = "Torrents"
-        ListViewGroup1.Name = "lvgTorrents"
-        ListViewGroup2.Header = "Files And Directories"
-        ListViewGroup2.Name = "lvgFilesAndDirectories"
-        Me.lvSources.Groups.AddRange(New System.Windows.Forms.ListViewGroup() {ListViewGroup1, ListViewGroup2})
+        ListViewGroup3.Header = "Torrents"
+        ListViewGroup3.Name = "lvgTorrents"
+        ListViewGroup4.Header = "Files And Directories"
+        ListViewGroup4.Name = "lvgFilesAndDirectories"
+        Me.lvSources.Groups.AddRange(New System.Windows.Forms.ListViewGroup() {ListViewGroup3, ListViewGroup4})
         Me.lvSources.Location = New System.Drawing.Point(12, 12)
         Me.lvSources.Name = "lvSources"
         Me.lvSources.ShowItemToolTips = True

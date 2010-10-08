@@ -185,8 +185,9 @@
 
     Private Function GetResumeDat() As Dictionary(Of String, Object)
         Dim resume_dat_fs As System.IO.FileStream
-        If System.IO.File.Exists(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat")) Then
-            resume_dat_fs = System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat"))
+        Static resume_dat_path As String = My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat")
+        If System.IO.File.Exists(resume_dat_path) Then
+            resume_dat_fs = System.IO.File.OpenRead(resume_dat_path)
         Else
             Dim ofd As New OpenFileDialog
 
@@ -202,8 +203,9 @@
                 ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
             End If
             ofd.Multiselect = False
-            If ofd.ShowDialog(Me) = Windows.Forms.DialogResult.OK Then
-                resume_dat_fs = System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat"))
+            If InvokeLambda(Of Control, System.Windows.Forms.DialogResult).InvokeLambda(AddressOf ofd.ShowDialog, Me, Me) = Windows.Forms.DialogResult.OK Then
+                resume_dat_path = ofd.FileName
+                resume_dat_fs = System.IO.File.OpenRead(resume_dat_path)
             Else
                 Throw New ApplicationException("Can't find resume.dat")
             End If
@@ -464,6 +466,7 @@
     End Sub
 
     Private Sub MergeWorker_RunWorkerCompleted(ByVal sender As System.Object, ByVal e As System.ComponentModel.RunWorkerCompletedEventArgs) Handles MergeWorker.RunWorkerCompleted
+        If close_requested Then Me.Close()
         btnAddDirectory.Enabled = True
         btnAddFiles.Enabled = True
         btnAddTorrents.Enabled = True
@@ -471,5 +474,14 @@
         lvSources_SelectedIndexChanged(Me, Nothing)
         lvSources.Enabled = True
         btnStart.Text = "Start!"
+    End Sub
+
+    Dim close_requested As Boolean = False
+    Private Sub MainForm_FormClosing(ByVal sender As System.Object, ByVal e As System.Windows.Forms.FormClosingEventArgs) Handles MyBase.FormClosing
+        If MergeWorker.IsBusy Then
+            close_requested = True 'remember that we want to close later
+            e.Cancel = True 'don't close just yet
+            MergeWorker.CancelAsync()
+        End If
     End Sub
 End Class
