@@ -83,6 +83,7 @@
   <ItemGroup>
     <Compile Include="Bencode.vb" />
     <Compile Include="CheckHash.vb" />
+    <Compile Include="InvokeLambda.vb" />
     <Compile Include="MainForm.vb">
       <SubType>Form</SubType>
     </Compile>

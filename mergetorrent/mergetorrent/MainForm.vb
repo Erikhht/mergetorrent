@@ -39,7 +39,7 @@
             End Get
             Set(ByVal value As Double)
                 Processed_ = value
-                Me.SubItems(0).Text = Processed_.ToString("P02")
+                Me.SubItems(1).Text = Processed_.ToString("P02")
             End Set
         End Property
 
@@ -49,7 +49,7 @@
             End Get
             Set(ByVal value As Double)
                 Completion_ = value
-                Me.SubItems(1).Text = Completion_.ToString("P02")
+                Me.SubItems(2).Text = Completion_.ToString("P02")
             End Set
         End Property
 
@@ -59,7 +59,7 @@
             End Get
             Set(ByVal value As Double)
                 Recovered_ = value
-                Me.SubItems(2).Text = Recovered_.ToString("P02")
+                Me.SubItems(3).Text = Recovered_.ToString("P02")
             End Set
         End Property
 
@@ -69,7 +69,7 @@
             End Get
             Set(ByVal value As String)
                 Status_ = value
-                Me.SubItems(3).Text = Status_
+                Me.SubItems(4).Text = Status_
             End Set
         End Property
 
@@ -263,18 +263,25 @@
     Private Function FindAllByLength(ByVal target_length As Long) As List(Of String)
         FindAllByLength = New List(Of String)
 
-        For Each possible_source As SourceItem In lvSources.Items
-            Select Case possible_source.Type
+        For i As Integer = 0 To lvSources.Items.Count - 1
+            Dim possible_source_type As SourceItem.SourceItemType = InvokeLambda(Of Integer, SourceItem.SourceItemType).InvokeLambda(Function(x As Integer)
+                                                                                                                                         Return DirectCast(lvSources.Items(x), SourceItem).Type
+                                                                                                                                     End Function, i, Me)
+            Dim possible_source_path As String = InvokeLambda(Of Integer, String).InvokeLambda(Function(x As Integer)
+                                                                                                   Return DirectCast(lvSources.Items(x), SourceItem).Path
+                                                                                               End Function, i, Me)
+            Select Case possible_source_type
                 Case SourceItem.SourceItemType.Torrent
-                    Dim br As New System.IO.BinaryReader(System.IO.File.OpenRead(possible_source.Path))
+                    Dim br As New System.IO.BinaryReader(System.IO.File.OpenRead(possible_source_path))
                     Dim possible_source_torrent As Dictionary(Of String, Object) = Bencode.DecodeDictionary(br)
                     br.Close()
                     Dim possible_source_info As Dictionary(Of String, Object)
                     possible_source_info = DirectCast(possible_source_torrent("info"), Dictionary(Of String, Object))
-                    Dim m As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(possible_source.Path)
+                    Dim m As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(possible_source_path)
                     'now we have files to look at
                     For Each fi As MultiFileStream.FileInfo In m
                         For Each s As String In fi.Path
+                            If MergeWorker.CancellationPending Then Exit Function
                             If Not FindAllByLength.Contains(s) AndAlso _
                                My.Computer.FileSystem.FileExists(s) AndAlso _
                                My.Computer.FileSystem.GetFileInfo(s).Length = target_length Then
@@ -283,18 +290,20 @@
                         Next
                     Next
                 Case SourceItem.SourceItemType.File
-                    If Not FindAllByLength.Contains(possible_source.Path) AndAlso _
-                       My.Computer.FileSystem.FileExists(possible_source.Path) AndAlso _
-                       My.Computer.FileSystem.GetFileInfo(possible_source.Path).Length = target_length Then
-                        FindAllByLength.Add(possible_source.Path)
+                    If Not FindAllByLength.Contains(possible_source_path) AndAlso _
+                       My.Computer.FileSystem.FileExists(possible_source_path) AndAlso _
+                       My.Computer.FileSystem.GetFileInfo(possible_source_path).Length = target_length Then
+                        FindAllByLength.Add(possible_source_path)
                     End If
                 Case SourceItem.SourceItemType.Directory
                     'we don't use GetFiles recursive feature because there might be some directories that we can't read.
                     Dim directory_stack As New Queue(Of System.IO.DirectoryInfo)
-                    directory_stack.Enqueue(My.Computer.FileSystem.GetDirectoryInfo(possible_source.Path))
+                    directory_stack.Enqueue(My.Computer.FileSystem.GetDirectoryInfo(possible_source_path))
                     Do While directory_stack.Count > 0
+                        If MergeWorker.CancellationPending Then Exit Function
                         Try
                             For Each f As System.IO.FileInfo In directory_stack.Peek.GetFiles
+                                If MergeWorker.CancellationPending Then Exit Function
                                 If Not FindAllByLength.Contains(f.FullName) AndAlso _
                                    f.Length = target_length Then
                                     FindAllByLength.Add(f.FullName)
@@ -305,6 +314,7 @@
                         End Try
                         Try
                             For Each d As System.IO.DirectoryInfo In directory_stack.Peek.GetDirectories
+                                If MergeWorker.CancellationPending Then Exit Function
                                 directory_stack.Enqueue(d)
                             Next
                         Catch ex As UnauthorizedAccessException
@@ -316,42 +326,63 @@
         Next
     End Function
 
+    Private Delegate Function GetSourceItemCallback(ByVal index As Integer) As SourceItem
+
+    Private Function GetSourceItem(ByVal index As Integer) As SourceItem
+        If Me.lvSources.InvokeRequired Then
+            Dim d As New GetSourceItemCallback(AddressOf GetSourceItem)
+            Return DirectCast(Me.Invoke(d, New Object() {index}), SourceItem)
+        Else
+            Return DirectCast(lvSources.Items(index), SourceItem)
+        End If
+    End Function
+
     Private Sub btnStart_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnStart.Click
-        btnStart.Enabled = False
-        btnStart.Text = "Running..."
+        If Not MergeWorker.IsBusy Then
+            btnAddDirectory.Enabled = False
+            btnAddFiles.Enabled = False
+            btnAddTorrents.Enabled = False
+            btnClear.Enabled = False
+            btnClearAll.Enabled = False
+            'lvSources_ItemCountChanged(Me, Nothing)
+            'lvSources_SelectedIndexChanged(Me, Nothing)
+            lvSources.Enabled = False
+            btnStart.Text = "Stop!"
+            MergeWorker.RunWorkerAsync()
+        Else
+            MergeWorker.CancelAsync()
+        End If
+    End Sub
+
+    Private Sub Merge()
         Dim current_listitem_index As Integer = 0
         Do While current_listitem_index < lvSources.Items.Count
-            Dim current_listitem As SourceItem = DirectCast(lvSources.Items(current_listitem_index), SourceItem)
+            If MergeWorker.CancellationPending Then Exit Sub
+            Dim current_listitem As SourceItem = DirectCast(GetSourceItem(current_listitem_index), SourceItem)
             If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
                 Dim out_stream As MultiFileStream
                 Dim in_stream As MultiFileStream
-                current_listitem.Status = "Finding destination files..."
-                lvSources.Items(current_listitem_index) = current_listitem
-                My.Application.DoEvents()
+                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status = "Finding destination files...", Me)
                 Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path)
                 out_stream = New MultiFileStream(files, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
 
-                current_listitem.Status = "Finding source files..."
-                lvSources.Items(current_listitem_index) = current_listitem
-                My.Application.DoEvents()
+                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status = "Finding source files...", Me)
                 Dim lfi As New List(Of MultiFileStream.FileInfo)
                 For Each fi As MultiFileStream.FileInfo In files
                     Dim new_paths As List(Of String) = FindAllByLength(fi.Length)
-                    If new_paths.Contains(fi.Path(0)) AndAlso new_paths.IndexOf(fi.Path(0)) <> 0 Then 'make it first if it's there
-                        new_paths.Remove(fi.Path(0))
-                        new_paths.Insert(0, fi.Path(0))
+                    If MergeWorker.CancellationPending Then Exit Sub
+                    If Not new_paths.Contains(fi.Path(0)) Then '
+                        new_paths.Add(fi.Path(0))
                     End If
 
                     Dim new_fi As New MultiFileStream.FileInfo(new_paths, fi.Length)
                     lfi.Add(new_fi)
 
-                    current_listitem.Status &= "."
-                    lvSources.Items(current_listitem_index) = current_listitem
-                    My.Application.DoEvents()
+                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status &= ".", Me)
                 Next
                 in_stream = New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
 
-                current_listitem.Status = "" 'we'll update very soon anyway
+                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status = "", Me) 'we'll update very soon anyway
                 'now we have all the files that might work.  Start checking and merging.
 
                 Dim torrent As Dictionary(Of String, Object)
@@ -368,18 +399,12 @@
                 Dim pieces_position As Integer = 0
                 Dim complete_bytes As Long = 0
                 Dim recovered_bytes As Long = 0
-                Dim doevents_period As TimeSpan = New TimeSpan(0, 0, 0, 0, 500) 'every 1/2 second
-                Dim last_doevents As Date = Date.MinValue
 
                 Do While pieces_position < pieces.Length
-                    If last_doevents + doevents_period <= Now Then
-                        current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length)
-                        current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length)
-                        current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length)
-                        lvSources.Items(current_listitem_index) = current_listitem
-                        My.Application.DoEvents()
-                        last_doevents = Now
-                    End If
+                    If MergeWorker.CancellationPending Then Exit Sub
+                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
+                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
+                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
                     Dim read_len As Integer
 
                     read_len = CInt(Math.Min(piece_len, in_stream.Length - in_stream.Position))
@@ -398,6 +423,7 @@
                         out_stream.Position -= read_len 'back up
                         Dim useful_permutation As List(Of Integer) = in_stream.GetPermutation()
                         Do
+                            If MergeWorker.CancellationPending Then Exit Sub
                             in_stream.Read(buffer, 0, read_len)
                             hash_result = CheckHash.Hash(buffer, read_len)
                             i = 0
@@ -425,16 +451,25 @@
                     End If
                     pieces_position += 20
                 Loop
-                current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length)
-                current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length)
-                current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length)
-                lvSources.Items(current_listitem_index) = current_listitem
-                My.Application.DoEvents()
-                last_doevents = Now
+                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
+                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
+                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
             End If
             current_listitem_index = current_listitem_index + 1
         Loop
-        btnStart.Enabled = True
+    End Sub
+
+    Private Sub MergeWorker_DoWork(ByVal sender As System.Object, ByVal e As System.ComponentModel.DoWorkEventArgs) Handles MergeWorker.DoWork
+        Merge()
+    End Sub
+
+    Private Sub MergeWorker_RunWorkerCompleted(ByVal sender As System.Object, ByVal e As System.ComponentModel.RunWorkerCompletedEventArgs) Handles MergeWorker.RunWorkerCompleted
+        btnAddDirectory.Enabled = True
+        btnAddFiles.Enabled = True
+        btnAddTorrents.Enabled = True
+        lvSources_ItemCountChanged(Me, Nothing)
+        lvSources_SelectedIndexChanged(Me, Nothing)
+        lvSources.Enabled = True
         btnStart.Text = "Start!"
     End Sub
 End Class

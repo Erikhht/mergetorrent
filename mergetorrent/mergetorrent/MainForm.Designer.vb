@@ -33,10 +33,11 @@ Partial Class MainForm
         Me.btnClearAll = New System.Windows.Forms.Button()
         Me.lvSources = New System.Windows.Forms.ListView()
         Me.colName = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
-        Me.colVerified = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.colProcessed = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.colComplete = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.colRecovered = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.colStatus = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
+        Me.MergeWorker = New System.ComponentModel.BackgroundWorker()
         Me.SuspendLayout()
         '
         'btnAddTorrents
@@ -119,7 +120,7 @@ Partial Class MainForm
         Me.lvSources.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
                     Or System.Windows.Forms.AnchorStyles.Left) _
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colVerified, Me.colComplete, Me.colRecovered, Me.colStatus})
+        Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colProcessed, Me.colComplete, Me.colRecovered, Me.colStatus})
         Me.lvSources.FullRowSelect = True
         ListViewGroup1.Header = "Torrents"
         ListViewGroup1.Name = "lvgTorrents"
@@ -139,10 +140,10 @@ Partial Class MainForm
         Me.colName.Text = "Name"
         Me.colName.Width = 460
         '
-        'colVerified
+        'colProcessed
         '
-        Me.colVerified.Text = "Verified"
-        Me.colVerified.Width = 70
+        Me.colProcessed.Text = "Processed"
+        Me.colProcessed.Width = 70
         '
         'colComplete
         '
@@ -158,6 +159,10 @@ Partial Class MainForm
         '
         Me.colStatus.Text = "Status"
         Me.colStatus.Width = 187
+        '
+        'MergeWorker
+        '
+        Me.MergeWorker.WorkerSupportsCancellation = True
         '
         'MainForm
         '
@@ -187,9 +192,10 @@ Partial Class MainForm
     Friend WithEvents btnClearAll As System.Windows.Forms.Button
     Friend WithEvents lvSources As System.Windows.Forms.ListView
     Friend WithEvents colName As System.Windows.Forms.ColumnHeader
-    Friend WithEvents colVerified As System.Windows.Forms.ColumnHeader
+    Friend WithEvents colProcessed As System.Windows.Forms.ColumnHeader
     Friend WithEvents colComplete As System.Windows.Forms.ColumnHeader
     Friend WithEvents colRecovered As System.Windows.Forms.ColumnHeader
     Friend WithEvents colStatus As System.Windows.Forms.ColumnHeader
+    Friend WithEvents MergeWorker As System.ComponentModel.BackgroundWorker
 
 End Class
