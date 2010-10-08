@@ -203,7 +203,7 @@
                 ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
             End If
             ofd.Multiselect = False
-            If InvokeLambda(Of Control, System.Windows.Forms.DialogResult).InvokeLambda(AddressOf ofd.ShowDialog, Me, Me) = Windows.Forms.DialogResult.OK Then
+            If InvokeEx(AddressOf ofd.ShowDialog, Me, Me) = Windows.Forms.DialogResult.OK Then
                 resume_dat_path = ofd.FileName
                 resume_dat_fs = System.IO.File.OpenRead(resume_dat_path)
             Else
@@ -266,12 +266,8 @@
         FindAllByLength = New List(Of String)
 
         For i As Integer = 0 To lvSources.Items.Count - 1
-            Dim possible_source_type As SourceItem.SourceItemType = InvokeLambda(Of Integer, SourceItem.SourceItemType).InvokeLambda(Function(x As Integer)
-                                                                                                                                         Return DirectCast(lvSources.Items(x), SourceItem).Type
-                                                                                                                                     End Function, i, Me)
-            Dim possible_source_path As String = InvokeLambda(Of Integer, String).InvokeLambda(Function(x As Integer)
-                                                                                                   Return DirectCast(lvSources.Items(x), SourceItem).Path
-                                                                                               End Function, i, Me)
+            Dim possible_source_type As SourceItem.SourceItemType = InvokeEx(Function(x As Integer) DirectCast(lvSources.Items(x), SourceItem).Type, i, Me)
+            Dim possible_source_path As String = InvokeEx(Function(x As Integer) DirectCast(lvSources.Items(x), SourceItem).Path, i, Me)
             Select Case possible_source_type
                 Case SourceItem.SourceItemType.Torrent
                     Dim br As New System.IO.BinaryReader(System.IO.File.OpenRead(possible_source_path))
@@ -364,11 +360,11 @@
             If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
                 Dim out_stream As MultiFileStream
                 Dim in_stream As MultiFileStream
-                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status = "Finding destination files...", Me)
+                InvokeEx(Sub() current_listitem.Status = "Finding destination files...", Me)
                 Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path)
                 out_stream = New MultiFileStream(files, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
 
-                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status = "Finding source files...", Me)
+                InvokeEx(Sub() current_listitem.Status = "Finding source files...", Me)
                 Dim lfi As New List(Of MultiFileStream.FileInfo)
                 For Each fi As MultiFileStream.FileInfo In files
                     Dim new_paths As List(Of String) = FindAllByLength(fi.Length)
@@ -380,11 +376,11 @@
                     Dim new_fi As New MultiFileStream.FileInfo(new_paths, fi.Length)
                     lfi.Add(new_fi)
 
-                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status &= ".", Me)
+                    InvokeEx(Sub() current_listitem.Status &= ".", Me)
                 Next
                 in_stream = New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
 
-                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Status = "", Me) 'we'll update very soon anyway
+                InvokeEx(Sub() current_listitem.Status = "", Me) 'we'll update very soon anyway
                 'now we have all the files that might work.  Start checking and merging.
 
                 Dim torrent As Dictionary(Of String, Object)
@@ -404,9 +400,9 @@
 
                 Do While pieces_position < pieces.Length
                     If MergeWorker.CancellationPending Then Exit Sub
-                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
-                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
-                    InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
+                    InvokeEx(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
+                    InvokeEx(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
+                    InvokeEx(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
                     Dim read_len As Integer
 
                     read_len = CInt(Math.Min(piece_len, in_stream.Length - in_stream.Position))
@@ -453,9 +449,9 @@
                     End If
                     pieces_position += 20
                 Loop
-                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
-                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
-                InvokeLambda(Of Object, Object).InvokeLambda(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
+                InvokeEx(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
+                InvokeEx(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
+                InvokeEx(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
             End If
             current_listitem_index = current_listitem_index + 1
         Loop
