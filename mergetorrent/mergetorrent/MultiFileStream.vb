@@ -7,7 +7,11 @@
 
         Public ReadOnly Property Path(ByVal index As Integer) As String
             Get
-                Return Path_(index)
+                If index >= 0 AndAlso index < Path_.Count Then
+                    Return Path_(index)
+                Else
+                    Return ""
+                End If
             End Get
         End Property
 
@@ -63,7 +67,7 @@
         current_pos = 0
         current_filepos = 0
         current_permutation = New List(Of Integer)
-        For i As Integer = 0 To files.Count
+        For i As Integer = 0 To files.Count - 1
             current_permutation.Add(0)
         Next
     End Sub
@@ -160,8 +164,12 @@
         Loop
         Do
             Dim old_permutation As Integer = current_permutation(current_file)
-            current_permutation(current_file) = (current_permutation(current_file) + 1) Mod files(current_file).Path.Count
+            current_permutation(current_file) += 1
+            If current_permutation(current_file) >= files(current_file).Path.Count Then
+                current_permutation(current_file) = 0
+            End If
             If current_file = Me.current_file And old_permutation <> current_permutation(current_file) And current_stream IsNot Nothing Then
+                'if a stream is open and this new permutation doesn't use the same file in that position, close it
                 current_stream.Close()
                 current_stream = Nothing
             End If
@@ -202,8 +210,12 @@
         Return files(current_file).Path(current_permutation(current_file))
     End Function
 
-    Private Function GetStream(ByVal current_file As Integer) As System.IO.Stream
-        GetStream = System.IO.File.Open(GetCurrentFileName(), file_mode, file_access, file_share)
+    Private Function GetStream(ByVal current_file As Integer, ByVal ForRead As Boolean) As System.IO.Stream
+        If ForRead AndAlso Not My.Computer.FileSystem.FileExists(GetCurrentFileName()) Then
+            GetStream = System.IO.Stream.Null
+        Else
+            GetStream = System.IO.File.Open(GetCurrentFileName(), file_mode, file_access, file_share)
+        End If
         If GetStream.Length <> files(current_file).Length Then
             GetStream.SetLength(files(current_file).Length)
         End If
@@ -214,7 +226,7 @@
 
         Do While buffer_used < count
             If current_stream Is Nothing Then
-                current_stream = GetStream(current_file)
+                current_stream = GetStream(current_file, True)
                 current_stream.Position = current_filepos
             End If
 
@@ -247,8 +259,8 @@
         Dim buffer_used As Integer = 0
 
         Do While buffer_used < count
-            If current_stream Is Nothing Then
-                current_stream = GetStream(current_file)
+            If current_stream Is Nothing OrElse current_stream Is System.IO.Stream.Null Then
+                current_stream = GetStream(current_file, False)
                 current_stream.Position = current_filepos
             End If
 

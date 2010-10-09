@@ -1,6 +1,7 @@
 ﻿Public Class MainForm
 
-    Private Const SHA1_HASHBYTES As Int64 = 20
+    Private Const SHA1_HASHBYTES As Integer = 20
+    Private utorrent_config_dir As String = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
 
     Private Class SourceItem
         Inherits ListViewItem
@@ -99,8 +100,8 @@
         ofd.DefaultExt = ".torrent"
         ofd.DereferenceLinks = True
         ofd.Filter = "Torrents (*.torrent)|*.torrent|All files (*.*)|*.*"
-        If System.IO.Directory.Exists(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")) Then
-            ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
+        If System.IO.Directory.Exists(utorrent_config_dir) Then
+            ofd.InitialDirectory = utorrent_config_dir
         End If
         ofd.Multiselect = True
         ofd.Title = "Find Torrent(s)"
@@ -110,6 +111,7 @@
                 si.Group = lvSources.Groups("lvgTorrents")
                 lvSources.Items.Add(si)
             Next
+            utorrent_config_dir = My.Computer.FileSystem.GetParentPath(ofd.FileName)
         End If
         lvSources_ItemCountChanged(Me, Nothing)
     End Sub
@@ -183,11 +185,10 @@
         Process.Start("http://code.google.com/p/mergetorrent/")
     End Sub
 
-    Private Function GetResumeDat() As Dictionary(Of String, Object)
-        Dim resume_dat_fs As System.IO.FileStream
-        Static resume_dat_path As String = My.Computer.FileSystem.CombinePath(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent"), "resume.dat")
-        If System.IO.File.Exists(resume_dat_path) Then
-            resume_dat_fs = System.IO.File.OpenRead(resume_dat_path)
+    Private Function GetConfigFile(ByVal filename As String) As Dictionary(Of String, Object)
+        Dim config_file_fs As System.IO.FileStream
+        If System.IO.File.Exists(My.Computer.FileSystem.CombinePath(utorrent_config_dir, filename)) Then
+            config_file_fs = System.IO.File.OpenRead(My.Computer.FileSystem.CombinePath(utorrent_config_dir, filename))
         Else
             Dim ofd As New OpenFileDialog
 
@@ -197,62 +198,99 @@
             ofd.CheckPathExists = True
             ofd.DefaultExt = ".dat"
             ofd.DereferenceLinks = True
-            ofd.Filter = "resume.dat|resume.dat|All files (*.*)|*.*"
-            ofd.Title = "Open resume.dat"
-            If System.IO.Directory.Exists(My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")) Then
-                ofd.InitialDirectory = My.Computer.FileSystem.CombinePath(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "uTorrent")
+            ofd.Filter = My.Computer.FileSystem.GetName(filename) & "|" & My.Computer.FileSystem.GetName(filename) & "|All files (*.*)|*.*"
+            ofd.Title = "Open " & filename & " or cancel if you're not using uTorrent..."
+            If System.IO.Directory.Exists(utorrent_config_dir) Then
+                ofd.InitialDirectory = utorrent_config_dir
             End If
             ofd.Multiselect = False
             If InvokeEx(AddressOf ofd.ShowDialog, Me, Me) = Windows.Forms.DialogResult.OK Then
-                resume_dat_path = ofd.FileName
-                resume_dat_fs = System.IO.File.OpenRead(resume_dat_path)
+                utorrent_config_dir = My.Computer.FileSystem.GetParentPath(ofd.FileName)
+                config_file_fs = System.IO.File.OpenRead(ofd.FileName)
             Else
-                Throw New ApplicationException("Can't find resume.dat")
+                Throw New ApplicationException("Can't find " & filename)
             End If
         End If
-        Dim resume_dat As Dictionary(Of String, Object) = DirectCast(Bencode.Decode(resume_dat_fs), Dictionary(Of String, Object))
-        resume_dat_fs.Close()
-        Return resume_dat
+        Dim config_file As Dictionary(Of String, Object) = DirectCast(Bencode.Decode(config_file_fs), Dictionary(Of String, Object))
+        config_file_fs.Close()
+        Return config_file
     End Function
 
-    Private Function TorrentFilenameToMultiPath(ByVal torrent_filename As String) As List(Of MultiFileStream.FileInfo)
+    ''' <summary>
+    ''' 
+    ''' </summary>
+    ''' <param name="torrent_filename"></param>
+    ''' <param name="ForOutput">The list will have exactly one path member per element, otherwise maybe more</param>
+    ''' <returns></returns>
+    ''' <remarks></remarks>
+    Private Function TorrentFilenameToMultiPath(ByVal torrent_filename As String, ByVal ForOutput As Boolean) As List(Of MultiFileStream.FileInfo)
         TorrentFilenameToMultiPath = New List(Of MultiFileStream.FileInfo)
-        Dim resume_dat As Dictionary(Of String, Object) = GetResumeDat()
+        Dim resume_dat As Dictionary(Of String, Object) = GetConfigFile("resume.dat")
 
         Dim torrent_fs As System.IO.FileStream = System.IO.File.OpenRead(torrent_filename)
         Dim torrent As Dictionary(Of String, Object) = DirectCast(Bencode.Decode(torrent_fs), Dictionary(Of String, Object))
         torrent_fs.Close()
-        Dim current_torrent As Dictionary(Of String, Object) = DirectCast(resume_dat(My.Computer.FileSystem.GetName(torrent_filename)), Dictionary(Of String, Object))
-
+        Dim current_torrent As Dictionary(Of String, Object) = Nothing
+        For Each s As String In resume_dat.Keys
+            If My.Computer.FileSystem.CombinePath(utorrent_config_dir, s) = My.Computer.FileSystem.GetFileInfo(torrent_filename).FullName Then
+                current_torrent = DirectCast(resume_dat(s), Dictionary(Of String, Object))
+                Exit For
+            End If
+        Next
+        If current_torrent Is Nothing Then
+            Throw New ApplicationException("Can't find " & torrent_filename & " in resume.dat")
+        End If
         Dim info As Dictionary(Of String, Object)
         info = DirectCast(torrent("info"), Dictionary(Of String, Object))
-        If resume_dat.ContainsKey(My.Computer.FileSystem.GetName(torrent_filename)) Then
-            If info.ContainsKey("files") Then
-                For file_index As Integer = 0 To DirectCast(DirectCast(torrent("info"), Dictionary(Of String, Object))("files"), List(Of Object)).Count - 1
-                    Dim f As Dictionary(Of String, Object) = DirectCast(DirectCast(DirectCast(torrent("info"), Dictionary(Of String, Object))("files"), List(Of Object))(file_index), Dictionary(Of String, Object))
-                    Dim source_filename As String = System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte()))
-                    For Each path_element As Byte() In DirectCast(f("path"), List(Of Object))
-                        source_filename = My.Computer.FileSystem.CombinePath(source_filename, System.Text.Encoding.UTF8.GetString(path_element))
-                    Next
-                    If current_torrent.ContainsKey("targets") Then 'override
-                        For Each current_target As List(Of Object) In DirectCast(current_torrent("targets"), List(Of Object))
-                            If DirectCast(current_target(0), Long) = file_index Then
-                                source_filename = System.Text.Encoding.UTF8.GetString(DirectCast(current_target(1), Byte()))
-                                Exit For
-                            End If
-                        Next
-                    End If
-
-                    Dim fi As New MultiFileStream.FileInfo(source_filename, DirectCast(f("length"), Long))
-                    TorrentFilenameToMultiPath.Add(fi)
+        If info.ContainsKey("files") Then
+            For file_index As Integer = 0 To DirectCast(info("files"), List(Of Object)).Count - 1
+                Dim f As Dictionary(Of String, Object) = DirectCast(DirectCast(info("files"), List(Of Object))(file_index), Dictionary(Of String, Object))
+                Dim source_filenames As New List(Of String)
+                source_filenames.Add(System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte())))
+                For Each path_element As Byte() In DirectCast(f("path"), List(Of Object))
+                    source_filenames(0) = My.Computer.FileSystem.CombinePath(source_filenames(0), System.Text.Encoding.UTF8.GetString(path_element))
                 Next
-            ElseIf info.ContainsKey("length") Then
-                If current_torrent.ContainsKey("path") Then
-                    Dim source_filename As String = System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte()))
-                    Dim fi As New MultiFileStream.FileInfo(source_filename, DirectCast(info("length"), Long))
-                    TorrentFilenameToMultiPath.Add(fi)
+
+                If current_torrent.ContainsKey("targets") Then 'override
+                    For Each current_target As List(Of Object) In DirectCast(current_torrent("targets"), List(Of Object))
+                        If DirectCast(current_target(0), Long) = file_index Then
+                            If ForOutput Then
+                                source_filenames(0) = System.Text.Encoding.UTF8.GetString(DirectCast(current_target(1), Byte()))
+                            Else
+                                source_filenames(1) = System.Text.Encoding.UTF8.GetString(DirectCast(current_target(1), Byte()))
+                            End If
+                            Exit For
+                        End If
+                    Next
                 End If
+
+                If ForOutput Then
+                    If My.Computer.FileSystem.FileExists(source_filenames(0)) Then 'if the file exists, this is the output
+                        'do nothing
+                    ElseIf My.Computer.FileSystem.FileExists(source_filenames(0) & ".!ut") Then 'if it exists with .ut!, this is the output
+                        source_filenames(0) &= ".!ut"
+                    Else 'read the settings to determine how to store the file
+                        Dim settings_dat As Dictionary(Of String, Object) = GetConfigFile("settings.dat")
+                        If settings_dat.ContainsKey("append_incomplete") AndAlso DirectCast(settings_dat("append_incomplete"), Long) <> 0 Then
+                            source_filenames(0) &= ".!ut"
+                        End If
+                    End If
+                Else 'read both with and without extension
+                    For i As Integer = source_filenames.Count - 1 To 0 Step -1
+                        source_filenames.Add(source_filenames(i) & ".!ut")
+                    Next
+                End If
+                Dim fi As New MultiFileStream.FileInfo(source_filenames, DirectCast(f("length"), Long))
+                TorrentFilenameToMultiPath.Add(fi)
+            Next
+        ElseIf info.ContainsKey("length") Then
+            If current_torrent.ContainsKey("path") Then
+                Dim source_filename As String = System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte()))
+                Dim fi As New MultiFileStream.FileInfo(source_filename, DirectCast(info("length"), Long))
+                TorrentFilenameToMultiPath.Add(fi)
             End If
+        Else
+            Throw New ApplicationException("Can't find length/files of torrent in resume.dat")
         End If
     End Function
 
@@ -270,12 +308,7 @@
             Dim possible_source_path As String = InvokeEx(Function(x As Integer) DirectCast(lvSources.Items(x), SourceItem).Path, i, Me)
             Select Case possible_source_type
                 Case SourceItem.SourceItemType.Torrent
-                    Dim br As New System.IO.BinaryReader(System.IO.File.OpenRead(possible_source_path))
-                    Dim possible_source_torrent As Dictionary(Of String, Object) = Bencode.DecodeDictionary(br)
-                    br.Close()
-                    Dim possible_source_info As Dictionary(Of String, Object)
-                    possible_source_info = DirectCast(possible_source_torrent("info"), Dictionary(Of String, Object))
-                    Dim m As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(possible_source_path)
+                    Dim m As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(possible_source_path, False)
                     'now we have files to look at
                     For Each fi As MultiFileStream.FileInfo In m
                         For Each s As String In fi.Path
@@ -358,18 +391,17 @@
             If MergeWorker.CancellationPending Then Exit Sub
             Dim current_listitem As SourceItem = DirectCast(GetSourceItem(current_listitem_index), SourceItem)
             If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
-                Dim out_stream As MultiFileStream
-                Dim in_stream As MultiFileStream
                 InvokeEx(Sub() current_listitem.Status = "Finding destination files...", Me)
-                Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path)
-                out_stream = New MultiFileStream(files, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
+                Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path, True)
+                Dim out_stream As New MultiFileStream(files, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
 
                 InvokeEx(Sub() current_listitem.Status = "Finding source files...", Me)
                 Dim lfi As New List(Of MultiFileStream.FileInfo)
                 For Each fi As MultiFileStream.FileInfo In files
                     Dim new_paths As List(Of String) = FindAllByLength(fi.Length)
                     If MergeWorker.CancellationPending Then Exit Sub
-                    If Not new_paths.Contains(fi.Path(0)) Then '
+                    If new_paths.IndexOf(fi.Path(0)) > 1 Then 'if it's there but not first then make it first.  This might speed things up, who knows?
+                        new_paths.Remove(fi.Path(0))
                         new_paths.Add(fi.Path(0))
                     End If
 
@@ -378,7 +410,7 @@
 
                     InvokeEx(Sub() current_listitem.Status &= ".", Me)
                 Next
-                in_stream = New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
+                Dim in_stream As New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
 
                 InvokeEx(Sub() current_listitem.Status = "", Me) 'we'll update very soon anyway
                 'now we have all the files that might work.  Start checking and merging.
@@ -397,12 +429,17 @@
                 Dim pieces_position As Integer = 0
                 Dim complete_bytes As Long = 0
                 Dim recovered_bytes As Long = 0
+                Dim update_period As TimeSpan = New TimeSpan(0, 0, 0, 0, 100) 'every 100ms
+                Dim last_update As Date = Date.MinValue
 
                 Do While pieces_position < pieces.Length
                     If MergeWorker.CancellationPending Then Exit Sub
-                    InvokeEx(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
-                    InvokeEx(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
-                    InvokeEx(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
+                    If last_update + update_period <= Now Then
+                        InvokeEx(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
+                        InvokeEx(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
+                        InvokeEx(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
+                        last_update = Now
+                    End If
                     Dim read_len As Integer
 
                     read_len = CInt(Math.Min(piece_len, in_stream.Length - in_stream.Position))
@@ -410,10 +447,10 @@
                     out_stream.Read(buffer, 0, read_len)
                     hash_result = CheckHash.Hash(buffer, read_len)
                     Dim i As Integer = 0
-                    Do While i < 20 AndAlso pieces(pieces_position + i) = hash_result(i)
+                    Do While i < SHA1_HASHBYTES AndAlso pieces(pieces_position + i) = hash_result(i)
                         i += 1
                     Loop
-                    If i = 20 Then
+                    If i = SHA1_HASHBYTES Then
                         'match!  No need to read from the in_stream
                         in_stream.Position += read_len
                         complete_bytes += read_len
@@ -425,10 +462,10 @@
                             in_stream.Read(buffer, 0, read_len)
                             hash_result = CheckHash.Hash(buffer, read_len)
                             i = 0
-                            Do While i < 20 AndAlso pieces(pieces_position + i) = hash_result(i)
+                            Do While i < SHA1_HASHBYTES AndAlso pieces(pieces_position + i) = hash_result(i)
                                 i += 1
                             Loop
-                            If i = 20 Then
+                            If i = SHA1_HASHBYTES Then
                                 'match!
                                 complete_bytes += read_len
                                 recovered_bytes += read_len
@@ -447,7 +484,7 @@
                             End If
                         Loop
                     End If
-                    pieces_position += 20
+                    pieces_position += SHA1_HASHBYTES
                 Loop
                 InvokeEx(Sub() current_listitem.Completion = CDbl(complete_bytes) / CDbl(out_stream.Length), Me)
                 InvokeEx(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
