@@ -285,8 +285,25 @@
             Next
         ElseIf info.ContainsKey("length") Then
             If current_torrent.ContainsKey("path") Then
-                Dim source_filename As String = System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte()))
-                Dim fi As New MultiFileStream.FileInfo(source_filename, DirectCast(info("length"), Long))
+                Dim source_filenames As New List(Of String)
+                source_filenames.Add(System.Text.Encoding.UTF8.GetString(DirectCast(current_torrent("path"), Byte())))
+                If ForOutput Then
+                    If My.Computer.FileSystem.FileExists(source_filenames(0)) Then 'if the file exists, this is the output
+                        'do nothing
+                    ElseIf My.Computer.FileSystem.FileExists(source_filenames(0) & ".!ut") Then
+                        source_filenames(0) &= ".!ut"
+                    Else
+                        Dim settings_dat As Dictionary(Of String, Object) = GetConfigFile("settings.dat")
+                        If settings_dat.ContainsKey("append_incomplete") AndAlso DirectCast(settings_dat("append_incomplete"), Long) <> 0 Then
+                            source_filenames(0) &= ".!ut"
+                        End If
+                    End If
+                Else 'read both with and without extension
+                    For i As Integer = source_filenames.Count - 1 To 0 Step -1
+                        source_filenames.Add(source_filenames(i) & ".!ut")
+                    Next
+                End If
+                Dim fi As New MultiFileStream.FileInfo(source_filenames, DirectCast(info("length"), Long))
                 TorrentFilenameToMultiPath.Add(fi)
             End If
         Else
