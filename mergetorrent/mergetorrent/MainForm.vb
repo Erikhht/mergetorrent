@@ -377,12 +377,13 @@
     Private Delegate Function GetSourceItemCallback(ByVal index As Integer) As SourceItem
 
     Private Function GetSourceItem(ByVal index As Integer) As SourceItem
-        If Me.lvSources.InvokeRequired Then
-            Dim d As New GetSourceItemCallback(AddressOf GetSourceItem)
-            Return DirectCast(Me.Invoke(d, New Object() {index}), SourceItem)
-        Else
-            Return DirectCast(lvSources.Items(index), SourceItem)
-        End If
+        Return InvokeEx(Of Integer, SourceItem)(Function(x As Integer) DirectCast(lvSources.Items(x), SourceItem), index, lvSources)
+        'If Me.lvSources.InvokeRequired Then
+        '    Dim d As New GetSourceItemCallback(AddressOf GetSourceItem)
+        '    Return DirectCast(Me.Invoke(d, New Object() {index}), SourceItem)
+        'Else
+        '    Return DirectCast(lvSources.Items(index), SourceItem)
+        'End If
     End Function
 
     Private Sub btnStart_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnStart.Click
@@ -403,33 +404,110 @@
     End Sub
 
     Private Sub Merge()
-        Dim current_listitem_index As Integer = 0
-        Do While current_listitem_index < lvSources.Items.Count
+        'First get all the lists of files for output streams
+        Dim output_files As New List(Of List(Of MultiFileStream.FileInfo))(lvSources.Items.Count) 'each element is a list of the output files for a torrent
+        Dim file_lengths As New Dictionary(Of Long, List(Of String)) 'a dictionary of the lengths needed for the output files
+        For current_listitem_index As Integer = 0 To lvSources.Items.Count - 1
             If MergeWorker.CancellationPending Then Exit Sub
-            Dim current_listitem As SourceItem = DirectCast(GetSourceItem(current_listitem_index), SourceItem)
+            Dim current_listitem As SourceItem = GetSourceItem(current_listitem_index)
             If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
                 InvokeEx(Sub() current_listitem.Status = "Finding destination files...", Me)
                 Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path, True)
-                Dim out_stream As New MultiFileStream(files, IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
-
-                InvokeEx(Sub() current_listitem.Status = "Finding source files...", Me)
-                Dim lfi As New List(Of MultiFileStream.FileInfo)
+                output_files(current_listitem_index) = files
                 For Each fi As MultiFileStream.FileInfo In files
-                    Dim new_paths As List(Of String) = FindAllByLength(fi.Length)
+                    If Not file_lengths.ContainsKey(fi.Length) Then
+                        file_lengths.Add(fi.Length, New List(Of String)) 'empty list for now until we find files of this length
+                    End If
+                Next
+                InvokeEx(Sub() current_listitem.Status = "Found destination files", Me)
+            End If
+        Next
+
+        'Now fill out the file_lengths with files indexed by length
+        For current_listitem_index As Integer = 0 To lvSources.Items.Count - 1
+            If MergeWorker.CancellationPending Then Exit Sub
+            Dim possible_source_type As SourceItem.SourceItemType = InvokeEx(Function(x As Integer) DirectCast(lvSources.Items(x), SourceItem).Type, current_listitem_index, Me)
+            Dim possible_source_path As String = InvokeEx(Function(x As Integer) DirectCast(lvSources.Items(x), SourceItem).Path, current_listitem_index, Me)
+            Select Case possible_source_type
+                Case SourceItem.SourceItemType.Torrent
+                    Dim m As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(possible_source_path, False)
+                    'now we have files to look at
+                    For Each fi As MultiFileStream.FileInfo In m
+                        For Each s As String In fi.Path
+                            If MergeWorker.CancellationPending Then Exit Sub
+                            If My.Computer.FileSystem.FileExists(s) AndAlso _
+                               file_lengths.ContainsKey(My.Computer.FileSystem.GetFileInfo(s).Length) AndAlso _
+                               Not file_lengths(My.Computer.FileSystem.GetFileInfo(s).Length).Contains(s) Then
+                                file_lengths(My.Computer.FileSystem.GetFileInfo(s).Length).Add(s)
+                            End If
+                        Next
+                    Next
+                Case SourceItem.SourceItemType.File
+                    If My.Computer.FileSystem.FileExists(possible_source_path) AndAlso _
+                       file_lengths.ContainsKey(My.Computer.FileSystem.GetFileInfo(possible_source_path).Length) AndAlso _
+                       Not file_lengths(My.Computer.FileSystem.GetFileInfo(possible_source_path).Length).Contains(possible_source_path) Then
+                        file_lengths(My.Computer.FileSystem.GetFileInfo(possible_source_path).Length).Add(possible_source_path)
+                    End If
+                Case SourceItem.SourceItemType.Directory
+                    'we don't use GetFiles recursive feature because there might be some directories that we can't read.
+                    Dim directory_stack As New Queue(Of System.IO.DirectoryInfo)
+                    directory_stack.Enqueue(My.Computer.FileSystem.GetDirectoryInfo(possible_source_path))
+                    Do While directory_stack.Count > 0
+                        If MergeWorker.CancellationPending Then Exit Sub
+                        Try
+                            For Each f As System.IO.FileInfo In directory_stack.Peek.GetFiles
+                                If MergeWorker.CancellationPending Then Exit Sub
+                                If file_lengths.ContainsKey(f.Length) AndAlso _
+                                   Not file_lengths(f.Length).Contains(f.FullName) Then
+                                    file_lengths(f.Length).Add(f.FullName)
+                                End If
+                            Next
+                        Catch ex As UnauthorizedAccessException
+                            'do nothing, we'll just skip this directory
+                        End Try
+                        Try
+                            For Each d As System.IO.DirectoryInfo In directory_stack.Peek.GetDirectories
+                                If MergeWorker.CancellationPending Then Exit Sub
+                                directory_stack.Enqueue(d)
+                            Next
+                        Catch ex As UnauthorizedAccessException
+                            'do nothing, we'll just skip this directory
+                        End Try
+                        directory_stack.Dequeue() 'don't need it anymore
+                    Loop
+            End Select
+        Next
+
+        'Now get all the lists of the files for input streams
+        Dim input_files As New List(Of List(Of MultiFileStream.FileInfo))(lvSources.Items.Count)
+        For current_listitem_index As Integer = 0 To lvSources.Items.Count - 1
+            If MergeWorker.CancellationPending Then Exit Sub
+            Dim current_listitem As SourceItem = GetSourceItem(current_listitem_index)
+            If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
+                InvokeEx(Sub() current_listitem.Status = "Finding source files...", Me)
+                input_files(current_listitem_index) = New List(Of MultiFileStream.FileInfo)
+                For Each fi As MultiFileStream.FileInfo In output_files(current_listitem_index)
                     If MergeWorker.CancellationPending Then Exit Sub
+                    Dim new_paths As New List(Of String)(file_lengths(fi.Length)) 'make a copy because we change the sort order as needed
                     If new_paths.IndexOf(fi.Path(0)) > 1 Then 'if it's there but not first then make it first.  This might speed things up, who knows?
                         new_paths.Remove(fi.Path(0))
-                        new_paths.Add(fi.Path(0))
+                        new_paths.Insert(0, fi.Path(0))
                     End If
 
                     Dim new_fi As New MultiFileStream.FileInfo(new_paths, fi.Length)
-                    lfi.Add(new_fi)
-
+                    input_files(current_listitem_index).Add(new_fi)
                     InvokeEx(Sub() current_listitem.Status &= ".", Me)
                 Next
-                Dim in_stream As New MultiFileStream(lfi, IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
+                InvokeEx(Sub() current_listitem.Status = "Found source files", Me)
+            End If
+        Next
 
-                InvokeEx(Sub() current_listitem.Status = "", Me) 'we'll update very soon anyway
+        For current_listitem_index As Integer = 0 To lvSources.Items.Count - 1
+            If MergeWorker.CancellationPending Then Exit Sub
+            Dim current_listitem As SourceItem = DirectCast(GetSourceItem(current_listitem_index), SourceItem)
+            If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
+                Dim out_stream As New MultiFileStream(output_files(current_listitem_index), IO.FileMode.OpenOrCreate, IO.FileAccess.ReadWrite, IO.FileShare.ReadWrite)
+                Dim in_stream As New MultiFileStream(input_files(current_listitem_index), IO.FileMode.Open, IO.FileAccess.Read, IO.FileShare.ReadWrite)
                 'now we have all the files that might work.  Start checking and merging.
 
                 Dim torrent As Dictionary(Of String, Object)
@@ -508,7 +586,7 @@
                 InvokeEx(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
             End If
             current_listitem_index = current_listitem_index + 1
-        Loop
+        Next
     End Sub
 
     Private Sub MergeWorker_DoWork(ByVal sender As System.Object, ByVal e As System.ComponentModel.DoWorkEventArgs) Handles MergeWorker.DoWork
