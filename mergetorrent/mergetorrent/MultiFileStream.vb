@@ -2,8 +2,8 @@
     Inherits System.IO.Stream
 
     Public Class FileInfo
-        Dim Path_ As List(Of String)
-        Dim Length_ As Long
+        Private Path_ As List(Of String)
+        Private Length_ As Long
 
         Public ReadOnly Property Path(ByVal index As Integer) As String
             Get
@@ -233,7 +233,9 @@
             Dim read_len As Integer
 
             read_len = Math.Min(count - buffer_used, CInt(files(current_file).Length - current_filepos)) 'as much as can be done in one read
-            current_stream.Read(buffer, offset + buffer_used, read_len) 'read in as much as possible from this file
+            If current_stream.Read(buffer, offset + buffer_used, read_len) <> read_len Then 'read in as much as possible from this file
+                Throw New ApplicationException("Couldn't read enough bytes")
+            End If
             buffer_used += read_len
             current_filepos += read_len
             current_pos += read_len

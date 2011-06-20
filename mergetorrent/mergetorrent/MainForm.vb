@@ -405,7 +405,7 @@
 
     Private Sub Merge()
         'First get all the lists of files for output streams
-        Dim output_files As New List(Of List(Of MultiFileStream.FileInfo))(lvSources.Items.Count) 'each element is a list of the output files for a torrent
+        Dim output_files As New Dictionary(Of Integer, List(Of MultiFileStream.FileInfo))(lvSources.Items.Count) 'each element is a list of the output files for a torrent
         Dim file_lengths As New Dictionary(Of Long, List(Of String)) 'a dictionary of the lengths needed for the output files
         For current_listitem_index As Integer = 0 To lvSources.Items.Count - 1
             If MergeWorker.CancellationPending Then Exit Sub
@@ -413,7 +413,7 @@
             If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
                 InvokeEx(Sub() current_listitem.Status = "Finding destination files...", Me)
                 Dim files As List(Of MultiFileStream.FileInfo) = TorrentFilenameToMultiPath(current_listitem.Path, True)
-                output_files(current_listitem_index) = files
+                output_files.Add(current_listitem_index, files)
                 For Each fi As MultiFileStream.FileInfo In files
                     If Not file_lengths.ContainsKey(fi.Length) Then
                         file_lengths.Add(fi.Length, New List(Of String)) 'empty list for now until we find files of this length
@@ -479,17 +479,17 @@
         Next
 
         'Now get all the lists of the files for input streams
-        Dim input_files As New List(Of List(Of MultiFileStream.FileInfo))(lvSources.Items.Count)
+        Dim input_files As New Dictionary(Of Integer, List(Of MultiFileStream.FileInfo))(lvSources.Items.Count)
         For current_listitem_index As Integer = 0 To lvSources.Items.Count - 1
             If MergeWorker.CancellationPending Then Exit Sub
             Dim current_listitem As SourceItem = GetSourceItem(current_listitem_index)
             If current_listitem.Type = SourceItem.SourceItemType.Torrent Then
                 InvokeEx(Sub() current_listitem.Status = "Finding source files...", Me)
-                input_files(current_listitem_index) = New List(Of MultiFileStream.FileInfo)
+                input_files.Add(current_listitem_index, New List(Of MultiFileStream.FileInfo))
                 For Each fi As MultiFileStream.FileInfo In output_files(current_listitem_index)
                     If MergeWorker.CancellationPending Then Exit Sub
                     Dim new_paths As New List(Of String)(file_lengths(fi.Length)) 'make a copy because we change the sort order as needed
-                    If new_paths.IndexOf(fi.Path(0)) > 1 Then 'if it's there but not first then make it first.  This might speed things up, who knows?
+                    If new_paths.IndexOf(fi.Path(0)) > 0 Then 'if it's there but not first then make it first.  This might speed things up, who knows?
                         new_paths.Remove(fi.Path(0))
                         new_paths.Insert(0, fi.Path(0))
                     End If
@@ -585,7 +585,6 @@
                 InvokeEx(Sub() current_listitem.Processed = CDbl(out_stream.Position) / CDbl(out_stream.Length), Me)
                 InvokeEx(Sub() current_listitem.Recovered = CDbl(recovered_bytes) / CDbl(out_stream.Length), Me)
             End If
-            current_listitem_index = current_listitem_index + 1
         Next
     End Sub
 
