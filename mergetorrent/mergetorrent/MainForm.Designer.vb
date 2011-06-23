@@ -22,8 +22,8 @@ Partial Class MainForm
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim ListViewGroup1 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Torrents", System.Windows.Forms.HorizontalAlignment.Left)
-        Dim ListViewGroup2 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Files And Directories", System.Windows.Forms.HorizontalAlignment.Left)
+        Dim ListViewGroup5 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Torrents", System.Windows.Forms.HorizontalAlignment.Left)
+        Dim ListViewGroup6 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Files And Directories", System.Windows.Forms.HorizontalAlignment.Left)
         Me.btnAddTorrents = New System.Windows.Forms.Button()
         Me.btnAddFiles = New System.Windows.Forms.Button()
         Me.btnAddDirectory = New System.Windows.Forms.Button()
@@ -77,7 +77,7 @@ Partial Class MainForm
         '
         Me.btnStart.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.btnStart.Enabled = False
-        Me.btnStart.Location = New System.Drawing.Point(885, 370)
+        Me.btnStart.Location = New System.Drawing.Point(885, 357)
         Me.btnStart.Name = "btnStart"
         Me.btnStart.Size = New System.Drawing.Size(119, 28)
         Me.btnStart.TabIndex = 4
@@ -88,7 +88,7 @@ Partial Class MainForm
         '
         Me.lnkMergeTorrent.Anchor = CType((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lnkMergeTorrent.AutoSize = True
-        Me.lnkMergeTorrent.Location = New System.Drawing.Point(885, 354)
+        Me.lnkMergeTorrent.Location = New System.Drawing.Point(885, 341)
         Me.lnkMergeTorrent.Name = "lnkMergeTorrent"
         Me.lnkMergeTorrent.Size = New System.Drawing.Size(119, 13)
         Me.lnkMergeTorrent.TabIndex = 5
@@ -125,15 +125,15 @@ Partial Class MainForm
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colProcessed, Me.colComplete, Me.colRecovered, Me.colStatus})
         Me.lvSources.FullRowSelect = True
-        ListViewGroup1.Header = "Torrents"
-        ListViewGroup1.Name = "lvgTorrents"
-        ListViewGroup2.Header = "Files And Directories"
-        ListViewGroup2.Name = "lvgFilesAndDirectories"
-        Me.lvSources.Groups.AddRange(New System.Windows.Forms.ListViewGroup() {ListViewGroup1, ListViewGroup2})
+        ListViewGroup5.Header = "Torrents"
+        ListViewGroup5.Name = "lvgTorrents"
+        ListViewGroup6.Header = "Files And Directories"
+        ListViewGroup6.Name = "lvgFilesAndDirectories"
+        Me.lvSources.Groups.AddRange(New System.Windows.Forms.ListViewGroup() {ListViewGroup5, ListViewGroup6})
         Me.lvSources.Location = New System.Drawing.Point(12, 12)
         Me.lvSources.Name = "lvSources"
         Me.lvSources.ShowItemToolTips = True
-        Me.lvSources.Size = New System.Drawing.Size(867, 386)
+        Me.lvSources.Size = New System.Drawing.Size(867, 373)
         Me.lvSources.TabIndex = 8
         Me.lvSources.UseCompatibleStateImageBehavior = False
         Me.lvSources.View = System.Windows.Forms.View.Details
@@ -178,8 +178,11 @@ Partial Class MainForm
         '
         'MergeTorrentStatusLabel
         '
+        Me.MergeTorrentStatusLabel.AutoToolTip = True
         Me.MergeTorrentStatusLabel.Name = "MergeTorrentStatusLabel"
-        Me.MergeTorrentStatusLabel.Size = New System.Drawing.Size(0, 17)
+        Me.MergeTorrentStatusLabel.Size = New System.Drawing.Size(970, 17)
+        Me.MergeTorrentStatusLabel.Spring = True
+        Me.MergeTorrentStatusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft
         '
         'MainForm
         '

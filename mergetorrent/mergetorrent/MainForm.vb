@@ -406,23 +406,29 @@
         End If
     End Sub
 
-    Private Sub UpdateStatus(ByVal s As String, ByVal force As Boolean, ByVal listitem As SourceItem, Optional ByVal Completion As Double = -1, Optional ByVal Processed As Double = -1, Optional ByVal Recovered As Double = -1)
-        Dim update_period As TimeSpan = New TimeSpan(0, 0, 0, 0, 100) 'every 100ms
+    Private Sub UpdateStatus(ByVal s As String, ByVal force As Boolean, Optional ByVal listitem As SourceItem = Nothing, Optional ByVal Completion As Double = -1, Optional ByVal Processed As Double = -1, Optional ByVal Recovered As Double = -1)
+        Dim update_period As TimeSpan = New TimeSpan(0, 0, 0, 0, 500) 'every 500ms
         Static Dim last_update As Date = Date.MinValue
         If force OrElse last_update + update_period <= Now Then
             last_update = Now
-            MergeTorrentStatusLabel.Text = listitem.ToString & ": " & s
-            InvokeEx(Sub()
-                         listitem.Status = s
-                         listitem.Completion = Completion
-                         listitem.Processed = Processed
-                         listitem.Recovered = Recovered
-                     End Sub, Me)
+            If listitem IsNot Nothing Then
+                InvokeEx(Sub()
+                             MergeTorrentStatusLabel.Text = listitem.ToString & ": " & s
+                             listitem.Status = s
+                             If Completion <> -1 Then listitem.Completion = Completion
+                             If Processed <> -1 Then listitem.Processed = Processed
+                             If Recovered <> -1 Then listitem.Recovered = Recovered
+                         End Sub, Me)
+            Else
+                InvokeEx(Sub()
+                             MergeTorrentStatusLabel.Text = s
+                         End Sub, Me)
+            End If
         End If
     End Sub
 
     Private Sub Merge()
-
+        UpdateStatus("Mering...", True)
         'First get all the lists of files for output streams
         Dim output_files As New Dictionary(Of Integer, List(Of MultiFileStream.FileInfo))(lvSources.Items.Count) 'each element is a list of the output files for a torrent
         Dim file_lengths As New Dictionary(Of Long, List(Of String)) 'a dictionary of the lengths needed for the output files
@@ -649,6 +655,11 @@
     End Sub
 
     Private Sub MergeWorker_RunWorkerCompleted(ByVal sender As System.Object, ByVal e As System.ComponentModel.RunWorkerCompletedEventArgs) Handles MergeWorker.RunWorkerCompleted
+        If e.Cancelled Then
+            UpdateStatus("Cancelled.", True)
+        Else
+            UpdateStatus("Done.", True)
+        End If
         If close_requested Then Me.Close()
         btnAddDirectory.Enabled = True
         btnAddFiles.Enabled = True
