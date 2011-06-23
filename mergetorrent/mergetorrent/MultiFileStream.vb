@@ -206,7 +206,7 @@
         Loop While Position + Length - 1 >= current_pos + files(current_file).Length
     End Function
 
-    Private Function GetCurrentFileName() As String
+    Public Function GetCurrentFileName() As String
         Return files(current_file).Path(current_permutation(current_file))
     End Function
 
@@ -233,7 +233,7 @@
             Dim read_len As Integer
 
             read_len = Math.Min(count - buffer_used, CInt(files(current_file).Length - current_filepos)) 'as much as can be done in one read
-            If current_stream.Read(buffer, offset + buffer_used, read_len) <> read_len Then 'read in as much as possible from this file
+            If current_stream IsNot System.IO.Stream.Null AndAlso current_stream.Read(buffer, offset + buffer_used, read_len) <> read_len Then 'read in as much as possible from this file
                 Throw New ApplicationException("Couldn't read enough bytes")
             End If
             buffer_used += read_len
