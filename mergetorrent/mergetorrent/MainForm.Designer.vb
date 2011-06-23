@@ -22,8 +22,8 @@ Partial Class MainForm
     'Do not modify it using the code editor.
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
-        Dim ListViewGroup3 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Torrents", System.Windows.Forms.HorizontalAlignment.Left)
-        Dim ListViewGroup4 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Files And Directories", System.Windows.Forms.HorizontalAlignment.Left)
+        Dim ListViewGroup1 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Torrents", System.Windows.Forms.HorizontalAlignment.Left)
+        Dim ListViewGroup2 As System.Windows.Forms.ListViewGroup = New System.Windows.Forms.ListViewGroup("Files And Directories", System.Windows.Forms.HorizontalAlignment.Left)
         Me.btnAddTorrents = New System.Windows.Forms.Button()
         Me.btnAddFiles = New System.Windows.Forms.Button()
         Me.btnAddDirectory = New System.Windows.Forms.Button()
@@ -38,6 +38,9 @@ Partial Class MainForm
         Me.colRecovered = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.colStatus = CType(New System.Windows.Forms.ColumnHeader(), System.Windows.Forms.ColumnHeader)
         Me.MergeWorker = New System.ComponentModel.BackgroundWorker()
+        Me.MergeTorrentStatus = New System.Windows.Forms.StatusStrip()
+        Me.MergeTorrentStatusLabel = New System.Windows.Forms.ToolStripStatusLabel()
+        Me.MergeTorrentStatus.SuspendLayout()
         Me.SuspendLayout()
         '
         'btnAddTorrents
@@ -122,11 +125,11 @@ Partial Class MainForm
                     Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lvSources.Columns.AddRange(New System.Windows.Forms.ColumnHeader() {Me.colName, Me.colProcessed, Me.colComplete, Me.colRecovered, Me.colStatus})
         Me.lvSources.FullRowSelect = True
-        ListViewGroup3.Header = "Torrents"
-        ListViewGroup3.Name = "lvgTorrents"
-        ListViewGroup4.Header = "Files And Directories"
-        ListViewGroup4.Name = "lvgFilesAndDirectories"
-        Me.lvSources.Groups.AddRange(New System.Windows.Forms.ListViewGroup() {ListViewGroup3, ListViewGroup4})
+        ListViewGroup1.Header = "Torrents"
+        ListViewGroup1.Name = "lvgTorrents"
+        ListViewGroup2.Header = "Files And Directories"
+        ListViewGroup2.Name = "lvgFilesAndDirectories"
+        Me.lvSources.Groups.AddRange(New System.Windows.Forms.ListViewGroup() {ListViewGroup1, ListViewGroup2})
         Me.lvSources.Location = New System.Drawing.Point(12, 12)
         Me.lvSources.Name = "lvSources"
         Me.lvSources.ShowItemToolTips = True
@@ -164,11 +167,26 @@ Partial Class MainForm
         '
         Me.MergeWorker.WorkerSupportsCancellation = True
         '
+        'MergeTorrentStatus
+        '
+        Me.MergeTorrentStatus.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.MergeTorrentStatusLabel})
+        Me.MergeTorrentStatus.Location = New System.Drawing.Point(0, 388)
+        Me.MergeTorrentStatus.Name = "MergeTorrentStatus"
+        Me.MergeTorrentStatus.Size = New System.Drawing.Size(1016, 22)
+        Me.MergeTorrentStatus.TabIndex = 9
+        Me.MergeTorrentStatus.Text = "StatusStrip1"
+        '
+        'MergeTorrentStatusLabel
+        '
+        Me.MergeTorrentStatusLabel.Name = "MergeTorrentStatusLabel"
+        Me.MergeTorrentStatusLabel.Size = New System.Drawing.Size(0, 17)
+        '
         'MainForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(1016, 410)
+        Me.Controls.Add(Me.MergeTorrentStatus)
         Me.Controls.Add(Me.lvSources)
         Me.Controls.Add(Me.btnClearAll)
         Me.Controls.Add(Me.btnClear)
@@ -179,6 +197,8 @@ Partial Class MainForm
         Me.Controls.Add(Me.btnAddTorrents)
         Me.Name = "MainForm"
         Me.Text = "mergetorrent"
+        Me.MergeTorrentStatus.ResumeLayout(False)
+        Me.MergeTorrentStatus.PerformLayout()
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -197,5 +217,7 @@ Partial Class MainForm
     Friend WithEvents colRecovered As System.Windows.Forms.ColumnHeader
     Friend WithEvents colStatus As System.Windows.Forms.ColumnHeader
     Friend WithEvents MergeWorker As System.ComponentModel.BackgroundWorker
+    Friend WithEvents MergeTorrentStatus As System.Windows.Forms.StatusStrip
+    Friend WithEvents MergeTorrentStatusLabel As System.Windows.Forms.ToolStripStatusLabel
 
 End Class
