@@ -3,6 +3,8 @@
 
 **mergetorrent** combines multiple, partial downloads to make downloads more complete.  (Works only if you have uTorrent installed.)
 
+#### [Download latest release](https://github.com/Erikhht/mergetorrent/releases/latest)
+
 # Using mergetorrent: #
 
   1. Add all the .torrent files that you want to fix.  Also add any files or directories that might have relevant files.  Don't worry if you add extra files or directories, mergetorrent will figure it out.
